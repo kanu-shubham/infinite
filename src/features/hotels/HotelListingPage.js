@@ -7,7 +7,6 @@ import HotelFilters from "./components/HotelFilters";
 import HotelSort from "./components/HotelSort";
 import HotelList from "./components/HotelList";
 import VirtualHotelList from "./components/VirtualHotelList";
-import LoadingSpinner from "../../components/common/LoadingSpinner";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import "./HotelListingPage.css";
 
@@ -58,8 +57,6 @@ export default function HotelListingPage() {
   const sentinelRef = useInfiniteScroll(loadMore, {
     enabled: hasMore && !isLoading && !error,
   });
-
-  const isInitialLoad = isLoading && hotels.length === 0;
 
   return (
     <div className="hotel-listing">
@@ -147,11 +144,7 @@ export default function HotelListingPage() {
 
           {error && <ErrorMessage message={error} onRetry={retry} />}
 
-          {isInitialLoad && !error && (
-            <LoadingSpinner size="large" text="Finding hotels for you..." />
-          )}
-
-          {!isInitialLoad && !error && (
+          {!error && (
             <HotelList
               hotels={hotels}
               isLoading={isLoading}

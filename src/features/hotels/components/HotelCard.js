@@ -1,7 +1,10 @@
-import React from "react";
+import React, { memo } from "react";
 import "./HotelCard.css";
 
-function StarRating({ rating }) {
+// memo: hotel objects are stable references from the service layer.
+// Without memo, every loadMore call re-renders all existing cards because
+// the parent array reference changes ([...prev, ...newItems]).
+const StarRating = memo(function StarRating({ rating }) {
   const fullStars = Math.floor(rating);
   const hasHalf = rating - fullStars >= 0.5;
   const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
@@ -13,9 +16,9 @@ function StarRating({ rating }) {
       {"☆".repeat(emptyStars)}
     </span>
   );
-}
+});
 
-export default function HotelCard({ hotel }) {
+const HotelCard = memo(function HotelCard({ hotel }) {
   return (
     <article className="hotel-card">
       <div className="hotel-card__image-wrapper">
@@ -48,4 +51,6 @@ export default function HotelCard({ hotel }) {
       </div>
     </article>
   );
-}
+});
+
+export default HotelCard;

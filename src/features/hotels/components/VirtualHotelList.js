@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import useVirtualList from "../hooks/useVirtualList";
 import useWindowVirtualizer from "../hooks/useWindowVirtualizer";
 import LoadingSpinner from "../../../components/common/LoadingSpinner";
@@ -9,8 +9,11 @@ const ITEM_HEIGHT = 170; // px — height of each compact row including gap
 
 // ---------------------------------------------------------------------------
 // Compact card shared by both strategies
+// memo: virtualItems array is recreated on every scroll tick, so without
+// memo every visible card would re-render on scroll even though hotel data
+// hasn't changed.
 // ---------------------------------------------------------------------------
-function CompactHotelCard({ hotel }) {
+const CompactHotelCard = memo(function CompactHotelCard({ hotel }) {
   return (
     <div className="compact-card">
       <img
@@ -38,7 +41,7 @@ function CompactHotelCard({ hotel }) {
       </div>
     </div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Strategy A — container-based (DEFAULT)

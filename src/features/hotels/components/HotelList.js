@@ -1,9 +1,15 @@
 import React from "react";
 import HotelCard from "./HotelCard";
+import HotelSkeletonGrid from "./HotelSkeleton";
 import LoadingSpinner from "../../../components/common/LoadingSpinner";
 import "./HotelList.css";
 
 export default function HotelList({ hotels, isLoading, hasMore, sentinelRef }) {
+  // Initial load — no hotels yet, show skeleton grid instead of spinner
+  if (isLoading && hotels.length === 0) {
+    return <HotelSkeletonGrid count={8} />;
+  }
+
   if (!isLoading && hotels.length === 0) {
     return (
       <div className="hotel-list__empty">
@@ -23,6 +29,7 @@ export default function HotelList({ hotels, isLoading, hasMore, sentinelRef }) {
         ))}
       </div>
 
+      {/* Infinite scroll sentinel — spinner only for "load more", not initial */}
       {hasMore && (
         <div ref={sentinelRef} className="hotel-list__sentinel">
           <LoadingSpinner size="small" text="Loading more hotels..." />
