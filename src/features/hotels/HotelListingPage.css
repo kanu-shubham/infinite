@@ -1,0 +1,26 @@
+.hotel-listing {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 20px;
+}
+
+.hotel-listing__header {
+  margin-bottom: 24px;
+}
+
+.hotel-listing__title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px;
+}
+
+.hotel-listing__subtitle {
+  font-size: 16px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.hotel-listing__toolbar {
+  margin: 20px 0;
+}

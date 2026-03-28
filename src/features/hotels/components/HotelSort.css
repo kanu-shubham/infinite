@@ -1,0 +1,42 @@
+.hotel-sort {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hotel-sort__count {
+  font-size: 15px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.hotel-sort__control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hotel-sort__label {
+  font-size: 14px;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.hotel-sort__select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.hotel-sort__select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
