@@ -2,7 +2,7 @@ import React, { useCallback } from "react";
 import { PRICE_RANGES, RATING_OPTIONS } from "../constants";
 import "./HotelFilters.css";
 
-export default function HotelFilters({ filters, onFilterChange, onReset }) {
+export default function HotelFilters({ filters, onFilterChange, onReset, hasActiveFilters }) {
   const handleSearchChange = useCallback(
     (e) => onFilterChange("search", e.target.value),
     [onFilterChange]
@@ -17,8 +17,6 @@ export default function HotelFilters({ filters, onFilterChange, onReset }) {
     (e) => onFilterChange("minRating", e.target.value),
     [onFilterChange]
   );
-
-  const hasActiveFilters = filters.priceRange || filters.minRating || filters.search;
 
   return (
     <div className="hotel-filters">

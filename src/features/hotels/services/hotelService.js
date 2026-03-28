@@ -48,6 +48,22 @@ function applyPagination(hotels, page, pageSize) {
   };
 }
 
+/** Fetches ALL hotels matching filters+sort — used by the virtualized list. */
+export function fetchAllHotels({ filters = {}, sortBy = "" } = {}) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      try {
+        const filtered = applyFilters(mockHotels, filters);
+        const sorted = applySorting(filtered, sortBy);
+        resolve(sorted);
+      } catch (err) {
+        reject(new Error("An unexpected error occurred."));
+      }
+    }, HOTELS.simulatedDelay);
+  });
+}
+
+/** Fetches a paginated slice — used by the standard infinite-scroll list. */
 export function fetchHotels({ filters = {}, sortBy = "", page = 1 } = {}) {
   return new Promise((resolve, reject) => {
     setTimeout(() => {

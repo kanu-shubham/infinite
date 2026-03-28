@@ -1,93 +1,111 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useReducer, useEffect, useCallback, useRef } from "react";
 import { fetchHotels } from "../services/hotelService";
 
-const initialFilters = {
-  priceRange: "",
-  minRating: "",
-  search: "",
+const initialState = {
+  hotels: [],
+  page: 1,
+  hasMore: true,
+  isLoading: true,
+  error: null,
+  totalCount: 0,
 };
 
-export default function useHotels() {
-  const [hotels, setHotels] = useState([]);
-  const [filters, setFilters] = useState(initialFilters);
-  const [sortBy, setSortBy] = useState("");
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [totalCount, setTotalCount] = useState(0);
+function reducer(state, action) {
+  switch (action.type) {
+    case "RESET":
+      return { ...initialState };
+    case "LOADING":
+      return { ...state, isLoading: true, error: null };
+    case "SUCCESS":
+      return {
+        ...state,
+        hotels:
+          action.page === 1
+            ? action.data
+            : [...state.hotels, ...action.data],
+        hasMore: action.hasMore,
+        totalCount: action.total,
+        isLoading: false,
+        error: null,
+      };
+    case "ERROR":
+      return { ...state, isLoading: false, error: action.message };
+    case "LOAD_MORE":
+      return { ...state, page: state.page + 1 };
+    default:
+      return state;
+  }
+}
 
+/**
+ * Paginated hotel fetching with infinite scroll.
+ * Accepts filters and sortBy from outside (owned by useHotelFilters).
+ */
+export default function useHotels({ filters, sortBy }) {
+  const [state, dispatch] = useReducer(reducer, initialState);
   const requestIdRef = useRef(0);
 
-  const loadHotels = useCallback(async (currentFilters, currentSort, currentPage) => {
-    const requestId = ++requestIdRef.current;
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const result = await fetchHotels({
-        filters: currentFilters,
-        sortBy: currentSort,
-        page: currentPage,
-      });
-
-      if (requestId !== requestIdRef.current) return;
-
-      setHotels(result.data);
-      setHasMore(result.hasMore);
-      setTotalCount(result.total);
-    } catch (err) {
-      if (requestId !== requestIdRef.current) return;
-      setError(err.message);
-    } finally {
-      if (requestId === requestIdRef.current) {
-        setIsLoading(false);
-      }
-    }
-  }, []);
-
+  // Reset and refetch from page 1 whenever filters or sort changes
   useEffect(() => {
-    loadHotels(filters, sortBy, page);
-  }, [filters, sortBy, page, loadHotels]);
+    dispatch({ type: "RESET" });
+  }, [filters, sortBy]);
 
-  const updateFilter = useCallback((key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-    setPage(1);
-  }, []);
+  // Fetch current page
+  useEffect(() => {
+    const rid = ++requestIdRef.current;
 
-  const updateSort = useCallback((value) => {
-    setSortBy(value);
-    setPage(1);
-  }, []);
+    dispatch({ type: "LOADING" });
+
+    fetchHotels({ filters, sortBy, page: state.page })
+      .then((result) => {
+        if (rid !== requestIdRef.current) return;
+        dispatch({
+          type: "SUCCESS",
+          data: result.data,
+          hasMore: result.hasMore,
+          total: result.total,
+          page: state.page,
+        });
+      })
+      .catch((err) => {
+        if (rid !== requestIdRef.current) return;
+        dispatch({ type: "ERROR", message: err.message });
+      });
+  }, [state.page, filters, sortBy]); // eslint-disable-line
 
   const loadMore = useCallback(() => {
-    if (!isLoading && hasMore) {
-      setPage((prev) => prev + 1);
+    if (!state.isLoading && state.hasMore) {
+      dispatch({ type: "LOAD_MORE" });
     }
-  }, [isLoading, hasMore]);
+  }, [state.isLoading, state.hasMore]);
 
   const retry = useCallback(() => {
-    loadHotels(filters, sortBy, page);
-  }, [filters, sortBy, page, loadHotels]);
-
-  const resetFilters = useCallback(() => {
-    setFilters(initialFilters);
-    setSortBy("");
-    setPage(1);
-  }, []);
+    dispatch({ type: "LOADING" });
+    const rid = ++requestIdRef.current;
+    fetchHotels({ filters, sortBy, page: state.page })
+      .then((result) => {
+        if (rid !== requestIdRef.current) return;
+        dispatch({
+          type: "SUCCESS",
+          data: result.data,
+          hasMore: result.hasMore,
+          total: result.total,
+          page: state.page,
+        });
+      })
+      .catch((err) => {
+        if (rid !== requestIdRef.current) return;
+        dispatch({ type: "ERROR", message: err.message });
+      });
+  }, [filters, sortBy, state.page]);
 
   return {
-    hotels,
-    filters,
-    sortBy,
-    hasMore,
-    isLoading,
-    error,
-    totalCount,
-    updateFilter,
-    updateSort,
+    hotels: state.hotels,
+    hasMore: state.hasMore,
+    isLoading: state.isLoading,
+    error: state.error,
+    totalCount: state.totalCount,
     loadMore,
     retry,
-    resetFilters,
   };
 }

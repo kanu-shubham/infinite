@@ -1,28 +1,59 @@
-import React from "react";
+import React, { useState } from "react";
+import useHotelFilters from "./hooks/useHotelFilters";
 import useHotels from "./hooks/useHotels";
+import useAllHotels from "./hooks/useAllHotels";
 import useInfiniteScroll from "./hooks/useInfiniteScroll";
 import HotelFilters from "./components/HotelFilters";
 import HotelSort from "./components/HotelSort";
 import HotelList from "./components/HotelList";
+import VirtualHotelList from "./components/VirtualHotelList";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import "./HotelListingPage.css";
 
+const TABS = [
+  { id: "virtual", label: "Virtualized" },
+  { id: "standard", label: "Standard" },
+];
+
+const STRATEGIES = [
+  { id: "container", label: "Container Scroll" },
+  { id: "window",    label: "Window Scroll" },
+];
+
 export default function HotelListingPage() {
+  const [activeTab, setActiveTab]         = useState("virtual");
+  const [strategy, setStrategy]           = useState("container");
+
+  // ── Shared filter + sort state (debounced search inside) ──────────────
   const {
-    hotels,
+    rawFilters,
     filters,
     sortBy,
+    hasActiveFilters,
+    updateFilter,
+    updateSort,
+    resetFilters,
+  } = useHotelFilters();
+
+  // ── Tab A: all hotels → virtualized rendering ─────────────────────────
+  const {
+    hotels: allHotels,
+    isLoading: allLoading,
+    error: allError,
+    retry: allRetry,
+  } = useAllHotels({ filters, sortBy });
+
+  // ── Tab B: paginated hotels → infinite scroll ─────────────────────────
+  const {
+    hotels,
     hasMore,
     isLoading,
     error,
     totalCount,
-    updateFilter,
-    updateSort,
     loadMore,
     retry,
-    resetFilters,
-  } = useHotels();
+  } = useHotels({ filters, sortBy });
 
   const sentinelRef = useInfiniteScroll(loadMore, {
     enabled: hasMore && !isLoading && !error,
@@ -32,6 +63,7 @@ export default function HotelListingPage() {
 
   return (
     <div className="hotel-listing">
+      {/* ── Header ── */}
       <header className="hotel-listing__header">
         <h1 className="hotel-listing__title">Find Your Perfect Stay</h1>
         <p className="hotel-listing__subtitle">
@@ -39,33 +71,95 @@ export default function HotelListingPage() {
         </p>
       </header>
 
+      {/* ── Shared filters ── */}
       <HotelFilters
-        filters={filters}
+        filters={rawFilters}
         onFilterChange={updateFilter}
         onReset={resetFilters}
+        hasActiveFilters={hasActiveFilters}
       />
 
+      {/* ── Toolbar: tabs + sort ── */}
       <div className="hotel-listing__toolbar">
+        <div className="tab-bar">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              className={`tab-bar__btn${activeTab === tab.id ? " tab-bar__btn--active" : ""}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         <HotelSort
           value={sortBy}
           onChange={updateSort}
-          totalCount={totalCount}
+          totalCount={activeTab === "virtual" ? allHotels.length : totalCount}
         />
       </div>
 
-      {error && <ErrorMessage message={error} onRetry={retry} />}
+      {/* ── Virtualized tab ── */}
+      {activeTab === "virtual" && (
+        <section className="hotel-listing__section">
+          <div className="hotel-listing__section-header">
+            <h2 className="hotel-listing__section-title">
+              Virtualized List
+              <span className="hotel-listing__section-subtitle">
+                All matching hotels loaded; only visible rows rendered
+              </span>
+            </h2>
+            <div className="strategy-toggle">
+              {STRATEGIES.map((s) => (
+                <button
+                  key={s.id}
+                  className={`strategy-toggle__btn${strategy === s.id ? " strategy-toggle__btn--active" : ""}`}
+                  onClick={() => setStrategy(s.id)}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      {isInitialLoad && !error && (
-        <LoadingSpinner size="large" text="Finding the best hotels for you..." />
+          <VirtualHotelList
+            hotels={allHotels}
+            isLoading={allLoading}
+            error={allError}
+            retry={allRetry}
+            strategy={strategy}
+          />
+        </section>
       )}
 
-      {!isInitialLoad && !error && (
-        <HotelList
-          hotels={hotels}
-          isLoading={isLoading}
-          hasMore={hasMore}
-          sentinelRef={sentinelRef}
-        />
+      {/* ── Standard tab ── */}
+      {activeTab === "standard" && (
+        <section className="hotel-listing__section">
+          <div className="hotel-listing__section-header">
+            <h2 className="hotel-listing__section-title">
+              Standard List
+              <span className="hotel-listing__section-subtitle">
+                Paginated infinite scroll — DOM grows as you scroll
+              </span>
+            </h2>
+          </div>
+
+          {error && <ErrorMessage message={error} onRetry={retry} />}
+
+          {isInitialLoad && !error && (
+            <LoadingSpinner size="large" text="Finding hotels for you..." />
+          )}
+
+          {!isInitialLoad && !error && (
+            <HotelList
+              hotels={hotels}
+              isLoading={isLoading}
+              hasMore={hasMore}
+              sentinelRef={sentinelRef}
+            />
+          )}
+        </section>
       )}
     </div>
   );
