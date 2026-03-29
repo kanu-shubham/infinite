@@ -4,7 +4,12 @@ import HotelSkeletonGrid from "./HotelSkeleton";
 import LoadingSpinner from "../../../components/common/LoadingSpinner";
 import "./HotelList.css";
 
-export default function HotelList({ hotels, isLoading, hasMore, sentinelRef }) {
+/**
+ * @param {boolean} isPaginated
+ *   false → shows IntersectionObserver sentinel at the bottom for infinite scroll
+ *   true  → hides the sentinel; caller renders <Pagination> below this component
+ */
+export default function HotelList({ hotels, isLoading, hasMore, sentinelRef, isPaginated = false }) {
   // Initial load — no hotels yet, show skeleton grid instead of spinner
   if (isLoading && hotels.length === 0) {
     return <HotelSkeletonGrid count={8} />;
@@ -29,14 +34,15 @@ export default function HotelList({ hotels, isLoading, hasMore, sentinelRef }) {
         ))}
       </div>
 
-      {/* Infinite scroll sentinel — spinner only for "load more", not initial */}
-      {hasMore && (
+      {/* Infinite scroll sentinel — hidden when using traditional pagination */}
+      {!isPaginated && hasMore && (
         <div ref={sentinelRef} className="hotel-list__sentinel">
           <LoadingSpinner size="small" text="Loading more hotels..." />
         </div>
       )}
 
-      {!hasMore && hotels.length > 0 && (
+      {/* "End of results" only makes sense for infinite scroll */}
+      {!isPaginated && !hasMore && hotels.length > 0 && (
         <p className="hotel-list__end">You've seen all results</p>
       )}
     </div>

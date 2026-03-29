@@ -4,6 +4,20 @@ export const HOTELS = {
   errorRate: 0,
 };
 
+/**
+ * Feature flags — flip these to switch behaviour without code changes.
+ *
+ * ENABLE_TRADITIONAL_PAGINATION
+ *   false (default) → infinite scroll: pages accumulate, sentinel loads more
+ *   true            → page-number buttons: each page REPLACES the previous one
+ *
+ * Affects both useHotels (server-side) and useClientSideHotels (client-side).
+ * The Pagination component is already built and wired — just set this to true.
+ */
+export const FEATURES = {
+  ENABLE_TRADITIONAL_PAGINATION: false,
+};
+
 export const SORT_OPTIONS = [
   { value: "price_asc", label: "Price: Low to High" },
   { value: "price_desc", label: "Price: High to Low" },

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FEATURES } from "./constants";
 import useHotelFilters from "./hooks/useHotelFilters";
 import useHotels from "./hooks/useHotels";
 import useAllHotels from "./hooks/useAllHotels";
@@ -6,25 +7,29 @@ import useInfiniteScroll from "./hooks/useInfiniteScroll";
 import HotelFilters from "./components/HotelFilters";
 import HotelSort from "./components/HotelSort";
 import HotelList from "./components/HotelList";
+import Pagination from "./components/Pagination";
 import VirtualHotelList from "./components/VirtualHotelList";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import "./HotelListingPage.css";
 
 const TABS = [
-  { id: "virtual", label: "Virtualized" },
-  { id: "standard", label: "Standard" },
+  { id: "virtual",  label: "Virtualized" },
+  { id: "standard", label: "Standard"    },
 ];
 
 const STRATEGIES = [
   { id: "container", label: "Container Scroll" },
-  { id: "window",    label: "Window Scroll" },
+  { id: "window",    label: "Window Scroll"    },
 ];
 
-export default function HotelListingPage() {
-  const [activeTab, setActiveTab]         = useState("virtual");
-  const [strategy, setStrategy]           = useState("container");
+// Read once at module level — FEATURES is a constant, not reactive state.
+const USE_PAGINATION = FEATURES.ENABLE_TRADITIONAL_PAGINATION;
 
-  // ── Shared filter + sort state (debounced search inside) ──────────────
+export default function HotelListingPage() {
+  const [activeTab, setActiveTab] = useState("virtual");
+  const [strategy,  setStrategy]  = useState("container");
+
+  // ── Shared filter + sort state (debounced search inside) ──────────────────
   const {
     rawFilters,
     filters,
@@ -35,15 +40,24 @@ export default function HotelListingPage() {
     resetFilters,
   } = useHotelFilters();
 
-  // ── Tab A: all hotels → virtualized rendering ─────────────────────────
+  // ── Tab A: all hotels → virtualized rendering ─────────────────────────────
   const {
     hotels: allHotels,
     isLoading: allLoading,
-    error: allError,
-    retry: allRetry,
+    error:     allError,
+    retry:     allRetry,
   } = useAllHotels({ filters, sortBy });
 
-  // ── Tab B: paginated hotels → infinite scroll ─────────────────────────
+  // ── Tab B: paginated or infinite-scroll list ───────────────────────────────
+  //
+  //  USE_PAGINATION = false (default)
+  //    fetchHotels called per page, results APPENDED
+  //    IntersectionObserver sentinel triggers loadMore()
+  //
+  //  USE_PAGINATION = true
+  //    fetchHotels called per page, results REPLACE previous
+  //    <Pagination> component drives goToPage()
+  //
   const {
     hotels,
     hasMore,
@@ -51,16 +65,20 @@ export default function HotelListingPage() {
     error,
     totalCount,
     loadMore,
+    currentPage,
+    totalPages,
+    goToPage,
     retry,
-  } = useHotels({ filters, sortBy });
+  } = useHotels({ filters, sortBy, isPaginated: USE_PAGINATION });
 
+  // Sentinel only active in infinite-scroll mode
   const sentinelRef = useInfiniteScroll(loadMore, {
-    enabled: hasMore && !isLoading && !error,
+    enabled: !USE_PAGINATION && hasMore && !isLoading && !error,
   });
 
   return (
     <div className="hotel-listing">
-      {/* ── Header ── */}
+      {/* ── Header ─────────────────────────────────────────────────────── */}
       <header className="hotel-listing__header">
         <h1 className="hotel-listing__title">Find Your Perfect Stay</h1>
         <p className="hotel-listing__subtitle">
@@ -68,7 +86,7 @@ export default function HotelListingPage() {
         </p>
       </header>
 
-      {/* ── Shared filters ── */}
+      {/* ── Shared filters ─────────────────────────────────────────────── */}
       <HotelFilters
         filters={rawFilters}
         onFilterChange={updateFilter}
@@ -76,7 +94,7 @@ export default function HotelListingPage() {
         hasActiveFilters={hasActiveFilters}
       />
 
-      {/* ── Toolbar: tabs + sort ── */}
+      {/* ── Toolbar: tabs + sort ───────────────────────────────────────── */}
       <div className="hotel-listing__toolbar">
         <div className="tab-bar">
           {TABS.map((tab) => (
@@ -97,7 +115,7 @@ export default function HotelListingPage() {
         />
       </div>
 
-      {/* ── Virtualized tab ── */}
+      {/* ── Virtualized tab ────────────────────────────────────────────── */}
       {activeTab === "virtual" && (
         <section className="hotel-listing__section">
           <div className="hotel-listing__section-header">
@@ -130,14 +148,16 @@ export default function HotelListingPage() {
         </section>
       )}
 
-      {/* ── Standard tab ── */}
+      {/* ── Standard tab ───────────────────────────────────────────────── */}
       {activeTab === "standard" && (
         <section className="hotel-listing__section">
           <div className="hotel-listing__section-header">
             <h2 className="hotel-listing__section-title">
-              Standard List
+              {USE_PAGINATION ? "Paginated List" : "Infinite Scroll List"}
               <span className="hotel-listing__section-subtitle">
-                Paginated infinite scroll — DOM grows as you scroll
+                {USE_PAGINATION
+                  ? `Page ${currentPage} of ${totalPages} — set FEATURES.ENABLE_TRADITIONAL_PAGINATION=false for infinite scroll`
+                  : "DOM grows as you scroll — set FEATURES.ENABLE_TRADITIONAL_PAGINATION=true for page buttons"}
               </span>
             </h2>
           </div>
@@ -145,12 +165,24 @@ export default function HotelListingPage() {
           {error && <ErrorMessage message={error} onRetry={retry} />}
 
           {!error && (
-            <HotelList
-              hotels={hotels}
-              isLoading={isLoading}
-              hasMore={hasMore}
-              sentinelRef={sentinelRef}
-            />
+            <>
+              <HotelList
+                hotels={hotels}
+                isLoading={isLoading}
+                hasMore={hasMore}
+                sentinelRef={sentinelRef}
+                isPaginated={USE_PAGINATION}
+              />
+
+              {/* Pagination rendered OUTSIDE HotelList so the list stays dumb */}
+              {USE_PAGINATION && !isLoading && totalPages > 1 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={goToPage}
+                />
+              )}
+            </>
           )}
         </section>
       )}

@@ -1,95 +1,85 @@
 /**
- * useClientSideHotels
+ * useClientSideHotels — fetch once, filter/sort/paginate in browser
  * ─────────────────────────────────────────────────────────────────────────────
- * ARCHITECTURE: Fetch all data ONCE on mount. All filtering, sorting, and
- * pagination are synchronous useMemo computations — no re-fetching on filter
- * change, no loading state between filter changes.
+ * HOW PAGINATION CONNECTS TO THE LIST
+ * ─────────────────────────────────────────────────────────────────────────────
  *
- * When to use this vs the server-side approach (useHotels):
+ *  rawHotels[] (full dataset, fetched once, lives in memory the whole time)
+ *      │
+ *      ▼  useMemo — applyFilters(rawHotels, filters)
+ *  filteredHotels[]
+ *      │
+ *      ▼  useMemo — applySort(filteredHotels, sortBy)
+ *  sortedHotels[]            ← totalCount = sortedHotels.length
+ *      │
+ *      ▼  useMemo — applyPage(sortedHotels, page, mode)
+ *  visibleHotels[]           ← what the component renders
  *
- *  Client-side (this hook)        │  Server-side (useHotels)
- * ─────────────────────────────────┼────────────────────────────────────────
- *  Small–medium dataset (<10k)     │  Large dataset (10k+ items)
- *  Filters feel instant (0ms)      │  Each filter fires a network request
- *  One network request total       │  N requests (one per filter/page change)
- *  Full dataset in browser memory  │  Only current page in memory
- *  No skeleton between filters     │  Can show skeleton/spinner per filter
- *  Simple state (useMemo only)     │  Complex async state (useReducer)
  *
- * KEY INSIGHT:
- *   rawHotels (source of truth, never modified)
- *       │
- *       ▼  useMemo — filter
- *   filteredHotels
- *       │
- *       ▼  useMemo — sort
- *   sortedHotels
- *       │
- *       ▼  useMemo — paginate (slice)
- *   visibleHotels  ← what the component renders
+ *  MODE A — Infinite scroll  (isPaginated = false, default)
+ *  ──────────────────────────────────────────────────────────
  *
- *   Each layer only recomputes when its inputs change.
+ *  page=1 → slice(0,  8) → [item0 ..item7]
+ *  page=2 → slice(0, 16) → [item0 ..item15]   ← GROWING window
+ *  page=3 → slice(0, 24) → [item0 ..item23]
+ *
+ *  All previously seen cards stay mounted (DOM grows).
+ *  No network request — just expanding the slice ceiling.
+ *
+ *
+ *  MODE B — Traditional pagination  (isPaginated = true)
+ *  ──────────────────────────────────────────────────────
+ *
+ *  page=1 → slice(0,  8) → [item0 ..item7]
+ *  page=2 → slice(8, 16) → [item8 ..item15]   ← SLIDING window
+ *  page=3 → slice(16,24) → [item16..item23]
+ *
+ *  Only the current page's cards are mounted (constant DOM size).
+ *  No network request — just moving the slice window.
+ *
+ *
+ *  The only difference between the two modes:
+ *    Infinite:   slice(0,          page * PAGE_SIZE)
+ *    Paginated:  slice((page-1) * PAGE_SIZE, page * PAGE_SIZE)
  */
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { fetchAllHotels } from "../services/hotelService";
+import { HOTELS } from "../constants";
 
-const PAGE_SIZE = 8;
+const { pageSize: PAGE_SIZE } = HOTELS;
 
-export default function useClientSideHotels({ filters, sortBy }) {
-  // ── 1. Source of truth — fetched once, never changes ────────────────────
-  const [rawHotels, setRawHotels]   = useState([]);
-  const [isLoading, setIsLoading]   = useState(true);  // only true on initial fetch
-  const [error, setError]           = useState(null);
+export default function useClientSideHotels({ filters, sortBy, isPaginated = false }) {
+  // ── 1. Source of truth — fetched once ───────────────────────────────────
+  const [rawHotels, setRawHotels] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError]         = useState(null);
 
-  // ── 2. Pagination — the only piece of state that isn't derived ───────────
+  // ── 2. Only real state — everything else is derived ─────────────────────
   const [page, setPage] = useState(1);
 
-  // ── 3. Fetch once on mount — empty dep array is intentional ─────────────
+  // ── 3. Fetch once on mount ───────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
-
-    fetchAllHotels()               // no filters — get everything
-      .then((data) => {
-        if (!cancelled) {
-          setRawHotels(data);
-          setIsLoading(false);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(err.message);
-          setIsLoading(false);
-        }
-      });
-
+    fetchAllHotels()
+      .then((data) => { if (!cancelled) { setRawHotels(data); setIsLoading(false); } })
+      .catch((err) => { if (!cancelled) { setError(err.message); setIsLoading(false); } });
     return () => { cancelled = true; };
-  }, []); // ← intentionally empty — one fetch, ever
+  }, []); // intentionally empty — one fetch, ever
 
-  // ── 4. Reset to page 1 when filters or sort change ──────────────────────
-  //   No async involved — the useMemo below runs synchronously on the same
-  //   render that processes the filter change. setPage(1) triggers one extra
-  //   render to trim the paginated slice, which is negligible.
-  useEffect(() => {
-    setPage(1);
-  }, [filters, sortBy]);
+  // ── 4. Reset page when filters/sort change ───────────────────────────────
+  useEffect(() => { setPage(1); }, [filters, sortBy]);
 
-  // ── 5. Filtering — pure synchronous derivation ──────────────────────────
-  //   Only recomputes when rawHotels or filters change.
-  //   No network request. No loading state. Runs in <1ms for <10k items.
+  // ── 5. Filter — pure derivation ──────────────────────────────────────────
   const filteredHotels = useMemo(() => {
     let result = rawHotels;
-
     if (filters.priceRange) {
       const [min, max] = filters.priceRange.split("-").map(Number);
       result = result.filter((h) => h.price >= min && h.price <= max);
     }
-
     if (filters.minRating) {
-      const min = parseFloat(filters.minRating);
-      result = result.filter((h) => h.rating >= min);
+      result = result.filter((h) => h.rating >= parseFloat(filters.minRating));
     }
-
     if (filters.search) {
       const term = filters.search.toLowerCase();
       result = result.filter(
@@ -98,37 +88,46 @@ export default function useClientSideHotels({ filters, sortBy }) {
           h.location.toLowerCase().includes(term)
       );
     }
-
     return result;
   }, [rawHotels, filters]);
 
-  // ── 6. Sorting — derives from filteredHotels ────────────────────────────
-  //   Separated from filtering so that a sort change doesn't re-run the
-  //   filter logic and vice versa.
+  // ── 6. Sort — derives from filteredHotels ────────────────────────────────
   const sortedHotels = useMemo(() => {
     if (!sortBy) return filteredHotels;
-
     const [field, direction] = sortBy.split("_");
     return [...filteredHotels].sort((a, b) =>
       direction === "asc" ? a[field] - b[field] : b[field] - a[field]
     );
   }, [filteredHotels, sortBy]);
 
-  // ── 7. Pagination — a simple slice of sorted results ────────────────────
-  //   "Infinite scroll" here just means increasing the slice ceiling.
-  //   The full dataset is already in memory; we just expose more of it.
-  const visibleHotels = useMemo(
-    () => sortedHotels.slice(0, page * PAGE_SIZE),
-    [sortedHotels, page]
-  );
+  // ── 7. Paginate — the ONLY difference between modes ─────────────────────
+  const visibleHotels = useMemo(() => {
+    if (isPaginated) {
+      // Sliding window — only this page's items are in the array
+      const start = (page - 1) * PAGE_SIZE;
+      return sortedHotels.slice(start, start + PAGE_SIZE);
+    }
+    // Growing window — all items up to current page ceiling
+    return sortedHotels.slice(0, page * PAGE_SIZE);
+  }, [sortedHotels, page, isPaginated]);
 
-  const hasMore      = visibleHotels.length < sortedHotels.length;
-  const totalCount   = sortedHotels.length; // post-filter count
+  const totalCount = sortedHotels.length;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
+
+  // ── Infinite scroll API ──────────────────────────────────────────────────
+  const hasMore = !isPaginated && visibleHotels.length < sortedHotels.length;
 
   const loadMore = useCallback(() => {
-    // No async, no loading state — just increment the slice ceiling.
     if (hasMore) setPage((p) => p + 1);
   }, [hasMore]);
+
+  // ── Traditional pagination API ───────────────────────────────────────────
+  const goToPage = useCallback(
+    (newPage) => {
+      if (newPage >= 1 && newPage <= totalPages) setPage(newPage);
+    },
+    [totalPages]
+  );
 
   const retry = useCallback(() => {
     setError(null);
@@ -139,12 +138,18 @@ export default function useClientSideHotels({ filters, sortBy }) {
   }, []);
 
   return {
-    hotels: visibleHotels,
-    hasMore,
-    isLoading,   // true ONLY during the initial fetch — never during filter changes
+    hotels:      visibleHotels,
+    isLoading,
     error,
     totalCount,
+    // Infinite scroll
+    hasMore,
     loadMore,
+    // Traditional pagination
+    currentPage: page,
+    totalPages,
+    goToPage,
+    // Shared
     retry,
   };
 }
