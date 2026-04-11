@@ -1,0 +1,236 @@
+/* ── InsuranceCard ─────────────────────────────────────────────────────────── */
+
+.ins-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  background: #ffffff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.2s, border-color 0.2s, transform 0.15s;
+  border-top: 3px solid var(--type-color, #6366f1);
+}
+
+.ins-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  border-color: var(--type-color, #6366f1);
+  transform: translateY(-2px);
+}
+
+/* ── Badges ── */
+.ins-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ins-card__type-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--type-color, #6366f1);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ins-card__sponsored-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 20px;
+  border: 1px solid #fde68a;
+}
+
+.ins-card__badge {
+  display: inline-block;
+  padding: 2px 7px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 20px;
+  border: 1px solid #bbf7d0;
+}
+
+/* ── Header ── */
+.ins-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.ins-card__name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.3;
+}
+
+.ins-card__provider {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.ins-card__price-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.ins-card__price {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.ins-card__price-unit {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: -2px;
+}
+
+/* ── Meta row ── */
+.ins-card__meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+  border-top: 1px solid #f3f4f6;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.ins-card__meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ins-card__meta-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+.ins-card__meta-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.ins-card__meta-value small {
+  font-weight: 400;
+  color: #9ca3af;
+  font-size: 11px;
+}
+
+/* ── Features ── */
+.ins-card__features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.ins-card__feature {
+  padding: 3px 8px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.ins-card__feature--more {
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  color: #94a3b8;
+}
+
+/* ── Match score ── */
+.ins-card__match {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ins-card__match-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.ins-card__match-pct {
+  font-weight: 700;
+  color: var(--type-color, #6366f1);
+}
+
+.ins-card__match-bar {
+  height: 5px;
+  background: #f3f4f6;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.ins-card__match-fill {
+  height: 100%;
+  background: var(--type-color, #6366f1);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.ins-card__feature-match {
+  margin: 0;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* ── CTA ── */
+.ins-card__cta {
+  margin-top: auto;
+  padding: 9px 0;
+  width: 100%;
+  background: var(--type-color, #6366f1);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.ins-card__cta:hover {
+  opacity: 0.88;
+}
+
+.ins-card__cta:active {
+  transform: scale(0.98);
+}
+
+/* ── Rank badge ── */
+.ins-card__rank {
+  position: absolute;
+  top: -1px;
+  right: 14px;
+  background: var(--type-color, #6366f1);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 0 0 6px 6px;
+}

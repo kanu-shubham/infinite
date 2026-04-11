@@ -9,3 +9,59 @@
 *, *::before, *::after {
   box-sizing: border-box;
 }
+
+/* ── App-level navigation ────────────────────────────────────────────────── */
+
+.app-nav {
+  background: #1e3a8a;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.app-nav__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  height: 48px;
+}
+
+.app-nav__brand {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.03em;
+  flex-shrink: 0;
+}
+
+.app-nav__tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.app-nav__tab {
+  padding: 6px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #bfdbfe;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.app-nav__tab:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.app-nav__tab--active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-weight: 700;
+}

@@ -1,0 +1,234 @@
+/* ── InsuranceRecommendationPage ─────────────────────────────────────────── */
+
+.ins-page {
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+/* ── Header ── */
+.ins-page__header {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 60%, #2563eb 100%);
+  padding: 28px 24px 24px;
+}
+
+.ins-page__header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ins-page__title {
+  margin: 0 0 6px;
+  font-size: 26px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.ins-page__subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #bfdbfe;
+}
+
+.ins-page__expedia-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 24px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
+}
+
+.ins-page__expedia-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #34d399;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* ── Content ── */
+.ins-page__content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Trip context banner ── */
+.ins-page__trip-banner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 20px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.ins-page__trip-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.ins-page__trip-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.ins-page__trip-dest {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.ins-page__trip-meta {
+  font-size: 12px;
+  color: #64748b;
+  text-transform: capitalize;
+}
+
+.ins-page__trip-desc {
+  margin: 0;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+  flex: 1;
+  border-left: 2px solid #e2e8f0;
+  padding-left: 16px;
+}
+
+/* ── Results header ── */
+.ins-page__results-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ins-page__results-title {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.ins-page__results-count {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* ── Type legend ── */
+.ins-page__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.type-dot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.type-dot__circle {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.type-dot__label {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* ── Cards grid ── */
+.ins-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+/* ── Architecture note ── */
+.ins-page__arch-note {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 8px;
+}
+
+.ins-page__arch-note h3 {
+  margin: 0 0 20px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.arch-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.arch-step {
+  display: flex;
+  gap: 12px;
+}
+
+.arch-step__num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.arch-step__body strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.arch-step__body p {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.6;
+}
