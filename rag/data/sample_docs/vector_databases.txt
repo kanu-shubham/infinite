@@ -1,0 +1,22 @@
+Title: Vector Databases and Approximate Nearest Neighbor Search
+Source: vectordb_guide
+
+Vector databases are specialized storage systems designed to efficiently store, index, and query high-dimensional vector embeddings. They are the backbone of modern semantic search and retrieval-augmented generation systems, enabling millisecond-latency similarity search over billions of vectors.
+
+Approximate Nearest Neighbor (ANN) algorithms trade a small amount of recall for dramatic speedups over exact nearest neighbor search. Exact search requires comparing the query vector to every stored vector (O(n) complexity). ANN algorithms achieve sub-linear query time through indexing structures that prune the search space. The key tradeoff parameters are recall (what fraction of true nearest neighbors are returned) and queries per second (QPS).
+
+HNSW (Hierarchical Navigable Small World) is one of the most popular ANN algorithms. It builds a multi-layer graph where nodes are vectors and edges connect nearby vectors. Higher layers are sparse long-range graphs, lower layers are dense short-range graphs. A query starts at the top layer, greedily navigates to the nearest node, then descends to the next layer. HNSW achieves 99% recall with 10x-100x speedup over exact search and supports efficient incremental index updates. The HNSW algorithm was published by Malkov and Yashunin in 2018.
+
+IVF (Inverted File Index) partitions the vector space into Voronoi cells using k-means clustering. Each vector is assigned to its nearest cluster centroid. At query time, only vectors in the closest n_probe clusters are compared to the query. IVF is more memory-efficient than HNSW but requires choosing n_probe to balance recall and speed. FAISS implements highly optimized IVF variants including IVF-PQ which uses Product Quantization to compress vectors, dramatically reducing memory requirements at the cost of some recall.
+
+Product Quantization (PQ) compresses high-dimensional vectors by splitting them into M sub-vectors, each quantized to one of k^star centroids. For a 768-dimensional embedding with M=8 and k^star=256, each vector can be stored in just 8 bytes instead of 3072 bytes (float32). This enables billion-scale ANN search on a single GPU or moderate CPU cluster. Scalar Quantization (SQ) is a simpler compression approach that quantizes each dimension to an 8-bit integer.
+
+Pinecone is a fully managed vector database launched in 2021. It handles all infrastructure for storing and querying vectors at scale, with automatic sharding, replication, and index management. Pinecone supports metadata filtering, allowing queries like "find the 10 most similar documents from the last 30 days tagged 'finance'." Its serverless tier can scale to zero when not in use and charges only for storage.
+
+Weaviate is an open-source vector database written in Go. It natively supports multimodal vectors (text + image + audio), GraphQL and REST APIs, and hybrid search combining BM25 sparse retrieval with dense vector search using Reciprocal Rank Fusion. Weaviate's modular architecture allows plugging in any embedding model through its vectorizer modules.
+
+Chroma is an open-source embedding database designed specifically for AI applications. It stores embeddings alongside their associated metadata and original documents, simplifying retrieval pipeline development. Chroma can run as an in-process library (no server needed), making it easy to prototype RAG applications. It supports persistent storage via DuckDB and ClickHouse backends.
+
+pgvector is a PostgreSQL extension that adds vector similarity search to an existing relational database. It supports L2 distance, cosine similarity, and inner product distance operators. pgvector supports both exact and approximate search using HNSW and IVF indexes. The advantage of pgvector is that it runs in the same database as the rest of application data, simplifying architecture for teams already using PostgreSQL. The pgvector extension was originally created by Andrew Kane in 2021.
+
+Choosing a vector database depends on scale, latency requirements, and existing infrastructure. For prototypes and small corpora (<1M vectors), an in-memory store with NumPy cosine similarity or Chroma is sufficient. For production at medium scale (1M-100M vectors), self-hosted FAISS or Weaviate is appropriate. For large-scale production (>100M vectors) or when operational simplicity matters, managed services like Pinecone or Elastic's vector search are recommended.

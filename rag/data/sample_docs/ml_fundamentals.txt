@@ -1,0 +1,16 @@
+Title: Machine Learning Fundamentals
+Source: ml_textbook
+
+Machine learning is a subfield of artificial intelligence that enables systems to learn from data without being explicitly programmed for every task. The core idea is that algorithms identify patterns in training data and use those patterns to make predictions or decisions on new, unseen data.
+
+Supervised Learning is the most common paradigm. In supervised learning, the algorithm is trained on labeled examples — pairs of input features and the correct output. The goal is to learn a mapping function from inputs to outputs. Common supervised learning tasks include classification (predicting a category) and regression (predicting a continuous value). Examples of supervised learning algorithms include linear regression, logistic regression, decision trees, support vector machines, and neural networks.
+
+Unsupervised Learning involves finding patterns in data without labels. The algorithm must discover structure on its own. Key unsupervised tasks include clustering (grouping similar examples) and dimensionality reduction (compressing data while preserving important structure). K-means clustering partitions data into k groups by minimizing within-cluster variance. Principal Component Analysis (PCA) finds the directions of maximum variance and projects data onto a lower-dimensional subspace.
+
+Reinforcement Learning trains agents to make sequences of decisions by rewarding desired behavior and penalizing undesired behavior. An agent interacts with an environment, takes actions, and receives reward signals. The goal is to learn a policy — a mapping from states to actions — that maximizes cumulative reward. Deep Q-Networks (DQN) combined deep learning with Q-learning to achieve superhuman performance in Atari games, published by DeepMind in 2013.
+
+The Bias-Variance Tradeoff is a fundamental concept in machine learning. Bias refers to the error from incorrect assumptions in the learning algorithm. High bias causes underfitting — the model is too simple to capture the data's structure. Variance refers to sensitivity to small fluctuations in the training data. High variance causes overfitting — the model memorizes training data but fails to generalize. The optimal model balances bias and variance. Regularization techniques such as L1 (Lasso), L2 (Ridge), and dropout reduce variance by penalizing model complexity.
+
+Cross-validation is a technique for assessing model generalization. In k-fold cross-validation, the dataset is split into k equally-sized folds. The model is trained k times, each time using k-1 folds for training and 1 fold for validation. The average validation score across all folds estimates true generalization performance. Stratified k-fold ensures class proportions are preserved in each fold, important for imbalanced datasets.
+
+Feature engineering transforms raw data into representations more suitable for learning algorithms. Common techniques include one-hot encoding for categorical variables, normalization (scaling to [0,1]) and standardization (zero mean, unit variance) for numerical variables, polynomial features for capturing non-linear relationships, and log transformation for skewed distributions. Feature selection methods like mutual information and recursive feature elimination reduce dimensionality and improve model interpretability.
