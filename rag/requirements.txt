@@ -1,0 +1,22 @@
+# Core RAG dependencies
+# Install with: pip install -r requirements.txt
+
+# ── Embedding models ─────────────────────────────────────────────────────
+sentence-transformers>=2.7.0    # SentenceTransformer bi-encoders + CrossEncoder reranker
+
+# ── Vector database ──────────────────────────────────────────────────────
+qdrant-client>=1.9.0            # Qdrant vector DB (in-memory for dev, Docker for prod)
+
+# ── Sparse retrieval ─────────────────────────────────────────────────────
+rank-bm25>=0.2.2                # BM25 implementation (BM25Okapi)
+
+# ── Core scientific stack ────────────────────────────────────────────────
+numpy>=1.24.0                   # Vector math
+
+# ── Optional: Real RAGAS evaluation (requires LLM API key) ──────────────
+# pip install ragas langchain-openai
+# ragas>=0.1.0
+# langchain-openai>=0.1.0
+
+# ── Development ─────────────────────────────────────────────────────────
+tqdm>=4.66.0                    # Progress bars
