@@ -1,0 +1,67 @@
+version: "3.9"
+
+# ── Shared volumes ────────────────────────────────────────────────────────────
+volumes:
+  mlruns:          # MLflow experiment store
+  models:          # trained model artifacts
+  data:            # baseline stats for drift monitoring
+
+# ── Services ──────────────────────────────────────────────────────────────────
+services:
+
+  # ── Prediction API ───────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - models:/app/models      # mount trained model
+      - data:/app/data          # mount baseline stats
+    environment:
+      - PYTHONPATH=/app
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    depends_on:
+      - mlflow
+
+  # ── One-shot training job (run with: docker compose --profile train up trainer)
+  trainer:
+    build:
+      context: .
+      dockerfile: Dockerfile.train
+    volumes:
+      - models:/app/models
+      - data:/app/data
+      - mlruns:/app/mlruns
+    environment:
+      - PYTHONPATH=/app
+      # Point MLflow at the sidecar container
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    profiles:
+      - train
+    depends_on:
+      - mlflow
+
+  # ── MLflow tracking server ────────────────────────────────────────────────
+  mlflow:
+    image: python:3.11-slim
+    command: >
+      bash -c "pip install mlflow -q &&
+               mlflow server
+               --host 0.0.0.0
+               --port 5000
+               --backend-store-uri /mlruns
+               --default-artifact-root /mlruns"
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlruns:/mlruns
+    restart: unless-stopped
