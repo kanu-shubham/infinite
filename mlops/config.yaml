@@ -20,11 +20,31 @@ serving:
   model_path: "models/model.pkl"
 
 mlflow:
-  tracking_uri: "mlruns"      # local file store; swap to http://mlflow:5000 in docker
+  # Local development: uses a folder called mlruns/
+  # Production (Azure): set env var MLFLOW_TRACKING_URI to point at a real
+  # MLflow server, or set AZURE_STORAGE_CONNECTION_STRING so train.py
+  # writes artifacts directly to Azure Blob Storage.
+  #
+  # Azure Blob artifact URI format:
+  #   wasbs://<container>@<storage-account>.blob.core.windows.net/
+  #
+  # The actual URI is resolved at runtime in train.py — this is just the
+  # local fallback used when neither env var is present.
+  tracking_uri: "mlruns"
   experiment_name: "hotel_price_prediction"
+  artifact_location: "mlruns"   # overridden by AZURE_STORAGE_CONNECTION_STRING
 
 monitoring:
   # model quality gate: fail CI if R2 drops below this
   min_r2_threshold: 0.85
   # data drift: alert if feature mean shifts more than this fraction
   drift_threshold: 0.15
+
+azure:
+  resource_group: "mlops-hotel-rg"
+  acr_name: "hotelpriceacr"
+  storage_account: "hotelmlopsstore"
+  blob_container: "mlflow-artifacts"
+  container_app_name: "hotel-price-api"
+  container_app_env: "hotel-price-env"
+  location: "eastus"

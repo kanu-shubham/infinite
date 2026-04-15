@@ -15,6 +15,11 @@ defaults:
   run:
     working-directory: mlops   # all steps run inside mlops/
 
+# ── Shared variables ──────────────────────────────────────────────────────────
+env:
+  CONTAINER_APP_NAME: hotel-price-api
+  AZURE_RESOURCE_GROUP: mlops-hotel-rg
+
 jobs:
   # ── 1. Code quality ────────────────────────────────────────────────────────
   lint:
@@ -66,7 +71,7 @@ jobs:
         with:
           files: mlops/coverage.xml
           flags: mlops
-        continue-on-error: true   # don't fail CI if codecov is unavailable
+        continue-on-error: true
 
   # ── 3. Train model + quality gate ─────────────────────────────────────────
   train-and-validate:
@@ -86,6 +91,12 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Train model
+        # When running in CI without Azure, MLflow falls back to local file store.
+        # In a real production run the secret AZURE_STORAGE_CONNECTION_STRING
+        # is set and MLflow writes directly to Azure Blob Storage.
+        env:
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI || 'mlruns' }}
         run: PYTHONPATH=. python -m src.train
 
       - name: Run quality gate (R² threshold)
@@ -105,11 +116,15 @@ jobs:
           path: mlops/data/baseline_stats.csv
           retention-days: 30
 
-  # ── 4. Build & smoke-test Docker image ────────────────────────────────────
-  docker:
-    name: Docker Build & Smoke Test
+  # ── 4. Build Docker image & push to Azure Container Registry ──────────────
+  build-and-push:
+    name: Build & Push to ACR
     runs-on: ubuntu-latest
     needs: train-and-validate
+    # Only push on main branch pushes, not on PRs (avoids deploying WIP)
+    if: github.event_name == 'push'
+    outputs:
+      image-tag: ${{ steps.image-tag.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
 
@@ -119,29 +134,131 @@ jobs:
           name: trained-model-${{ github.sha }}
           path: mlops/models/
 
-      - name: Build API image
-        run: docker build -t hotel-price-api:${{ github.sha }} .
+      - name: Download baseline stats
+        uses: actions/download-artifact@v4
+        with:
+          name: baseline-stats-${{ github.sha }}
+          path: mlops/data/
 
-      - name: Start container
-        run: |
-          docker run -d \
-            --name api-smoke-test \
-            -p 8000:8000 \
-            hotel-price-api:${{ github.sha }}
+      # Log in to Azure using a Service Principal stored as GitHub secrets.
+      # Create the SP once with:
+      #   az ad sp create-for-rbac --name mlops-hotel-sp --role contributor \
+      #     --scopes /subscriptions/<id>
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: |
+            {
+              "clientId":       "${{ secrets.AZURE_CLIENT_ID }}",
+              "clientSecret":   "${{ secrets.AZURE_CLIENT_SECRET }}",
+              "tenantId":       "${{ secrets.AZURE_TENANT_ID }}",
+              "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+            }
 
-      - name: Wait for API to be ready
+      - name: Log in to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      # Short SHA makes image tags human-readable and traceable back to a commit
+      - name: Generate image tag
+        id: image-tag
         run: |
+          TAG="${{ secrets.ACR_LOGIN_SERVER }}/hotel-price-api:${{ github.sha }}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Image tag: $TAG"
+
+      - name: Build and push Docker image to ACR
+        uses: docker/build-push-action@v5
+        with:
+          context: ./mlops
+          file: ./mlops/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.image-tag.outputs.tag }}
+            ${{ secrets.ACR_LOGIN_SERVER }}/hotel-price-api:latest
+          # Cache layers between builds so only changed layers are rebuilt
+          cache-from: type=registry,ref=${{ secrets.ACR_LOGIN_SERVER }}/hotel-price-api:latest
+          cache-to: type=inline
+
+      - name: Smoke test image locally before deploying
+        run: |
+          docker pull ${{ steps.image-tag.outputs.tag }}
+          docker run -d --name pre-deploy-test -p 8000:8000 ${{ steps.image-tag.outputs.tag }}
           for i in $(seq 1 15); do
             if curl -sf http://localhost:8000/health; then
-              echo "API is up"; exit 0
+              echo ""; echo "Local smoke test passed"; break
             fi
             echo "Attempt $i – waiting …"; sleep 3
           done
-          echo "API did not start in time"; exit 1
+          docker stop pre-deploy-test && docker rm pre-deploy-test
+        working-directory: .   # override: docker commands run from repo root
 
-      - name: Smoke test – /predict endpoint
+  # ── 5. Deploy to Azure Container Apps ────────────────────────────────────
+  deploy:
+    name: Deploy to Azure Container Apps
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      # GitHub will show a live link to the deployed API in the Actions UI
+      url: https://${{ steps.get-url.outputs.fqdn }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: |
+            {
+              "clientId":       "${{ secrets.AZURE_CLIENT_ID }}",
+              "clientSecret":   "${{ secrets.AZURE_CLIENT_SECRET }}",
+              "tenantId":       "${{ secrets.AZURE_TENANT_ID }}",
+              "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+            }
+
+      # Update the Container App to use the newly built image.
+      # Azure Container Apps handles zero-downtime rolling update automatically —
+      # it spins up new replicas before draining the old ones.
+      - name: Deploy new image to Container App
         run: |
-          curl -sf -X POST http://localhost:8000/predict \
+          az containerapp update \
+            --name "${{ env.CONTAINER_APP_NAME }}" \
+            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
+            --image "${{ needs.build-and-push.outputs.image-tag }}" \
+            --set-env-vars \
+              MLFLOW_TRACKING_URI="${{ secrets.MLFLOW_TRACKING_URI }}" \
+              AZURE_STORAGE_CONNECTION_STRING="${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}"
+
+      - name: Get deployed API URL
+        id: get-url
+        run: |
+          FQDN=$(az containerapp show \
+            --name "${{ env.CONTAINER_APP_NAME }}" \
+            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          echo "fqdn=$FQDN" >> $GITHUB_OUTPUT
+          echo "Deployed to: https://$FQDN"
+
+      # Hit the live Azure URL to confirm deployment is healthy end-to-end
+      - name: Production smoke test (live Azure URL)
+        run: |
+          API_URL="https://${{ steps.get-url.outputs.fqdn }}"
+
+          echo "Testing $API_URL/health …"
+          curl -sf "$API_URL/health" | python -c "
+          import sys, json
+          body = json.load(sys.stdin)
+          assert body['status'] == 'healthy', f'Unhealthy: {body}'
+          assert body['model_loaded'], 'Model not loaded in production!'
+          print('Health check passed:', body)
+          "
+
+          echo "Testing $API_URL/predict …"
+          curl -sf -X POST "$API_URL/predict" \
             -H "Content-Type: application/json" \
             -d '{
               "city": "London",
@@ -154,11 +271,16 @@ jobs:
             }' | python -c "
           import sys, json
           body = json.load(sys.stdin)
-          assert 'predicted_price_per_night' in body, 'Missing prediction field'
+          assert 'predicted_price_per_night' in body, 'Missing prediction'
           assert body['predicted_price_per_night'] > 0, 'Price must be positive'
-          print('Smoke test passed:', body)
+          print('Production predict test passed:', body)
           "
 
-      - name: Stop container
-        if: always()
-        run: docker stop api-smoke-test && docker rm api-smoke-test
+      - name: Print deployment summary
+        run: |
+          echo "╔══════════════════════════════════════════════════╗"
+          echo "  Deployment successful"
+          echo "  API URL : https://${{ steps.get-url.outputs.fqdn }}"
+          echo "  Image   : ${{ needs.build-and-push.outputs.image-tag }}"
+          echo "  Commit  : ${{ github.sha }}"
+          echo "╚══════════════════════════════════════════════════╝"

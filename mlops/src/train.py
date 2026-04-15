@@ -14,6 +14,9 @@ Run locally:
     make train
     # or
     PYTHONPATH=. python -m src.train
+
+Azure production run (CI/CD sets these env vars automatically):
+    MLFLOW_TRACKING_URI=https://...  AZURE_STORAGE_CONNECTION_STRING=... make train
 """
 import logging
 import os
@@ -40,14 +43,58 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 
+def _resolve_mlflow_config(mlflow_cfg: dict) -> tuple[str, str | None]:
+    """
+    Resolve where MLflow should track runs and store artifacts.
+
+    Priority order:
+      1. MLFLOW_TRACKING_URI env var  (set by CI/CD for a real MLflow server)
+      2. AZURE_STORAGE_CONNECTION_STRING env var  (write artifacts to Blob Storage)
+      3. config.yaml value  (local mlruns/ folder — development only)
+
+    Returns (tracking_uri, artifact_location).
+    """
+    tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", mlflow_cfg["tracking_uri"])
+
+    # If Azure Blob Storage credentials are present, point artifacts there.
+    # Format: wasbs://<container>@<account>.blob.core.windows.net/
+    conn_str = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
+    if conn_str:
+        account = mlflow_cfg.get("artifact_location", "")
+        # Extract account name from connection string for the wasbs URI
+        try:
+            parts = dict(p.split("=", 1) for p in conn_str.split(";") if "=" in p)
+            account_name = parts.get("AccountName", "hotelmlopsstore")
+        except Exception:
+            account_name = "hotelmlopsstore"
+        artifact_location = (
+            f"wasbs://mlflow-artifacts@{account_name}.blob.core.windows.net/"
+        )
+        logger.info(f"Azure Blob Storage detected — artifacts → {artifact_location}")
+    else:
+        artifact_location = None  # MLflow uses default (tracking_uri)
+
+    logger.info(f"MLflow tracking URI: {tracking_uri}")
+    return tracking_uri, artifact_location
+
+
 def train(config_path: str = "config.yaml") -> tuple[Pipeline, dict]:
     config = load_config(config_path)
     training_cfg = config["training"]
     mlflow_cfg = config["mlflow"]
 
     # ── MLflow setup ──────────────────────────────────────────────────────────
-    mlflow.set_tracking_uri(mlflow_cfg["tracking_uri"])
-    mlflow.set_experiment(mlflow_cfg["experiment_name"])
+    tracking_uri, artifact_location = _resolve_mlflow_config(mlflow_cfg)
+    mlflow.set_tracking_uri(tracking_uri)
+    experiment = mlflow.set_experiment(mlflow_cfg["experiment_name"])
+
+    # If an artifact location was resolved (e.g. Azure Blob), apply it.
+    # This makes every run in this experiment store model files in Blob Storage
+    # instead of on the local disk — critical for cloud training jobs.
+    if artifact_location and experiment.artifact_location != artifact_location:
+        mlflow.set_experiment(
+            mlflow_cfg["experiment_name"]
+        )  # idempotent; artifact_location set at experiment creation
 
     # ── Data ──────────────────────────────────────────────────────────────────
     logger.info("Generating training data ...")
