@@ -1,0 +1,50 @@
+model:
+  name: hotel_recommender
+  version: "1.0.0"
+
+data:
+  n_users: 5000
+  n_hotels: 500
+  n_interactions: 100000
+  random_state: 42
+
+towers:
+  # Both towers produce embeddings of this size.
+  # Dot product of user_embedding · hotel_embedding = relevance score.
+  embedding_dim: 32
+  # Hidden layer sizes inside each tower MLP
+  hidden_dims: [64, 32]
+  epochs: 10
+  batch_size: 512
+  learning_rate: 0.001
+
+ranker:
+  # XGBoost re-ranker applied on top of the retrieval candidates
+  n_candidates: 50       # how many candidates retrieval returns
+  n_estimators: 100
+  max_depth: 4
+  learning_rate: 0.05
+  random_state: 42
+
+serving:
+  host: "0.0.0.0"
+  port: 8001             # different port from the price predictor
+  model_path: "models/"
+  top_k: 10              # final number of recommendations returned
+
+mlflow:
+  tracking_uri: "mlruns"
+  experiment_name: "hotel_recommender"
+
+monitoring:
+  min_ndcg_threshold: 0.4   # CI fails if ranking quality drops below this
+  drift_threshold: 0.15
+
+azure:
+  resource_group: "mlops-hotel-rg"
+  acr_name: "hotelrecsysacr"
+  storage_account: "hotelmlopsstore"   # reuse same storage account
+  blob_container: "recsys-artifacts"
+  container_app_name: "hotel-recsys-api"
+  container_app_env: "hotel-price-env" # reuse same environment
+  location: "eastus"
