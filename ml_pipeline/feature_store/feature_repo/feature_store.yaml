@@ -1,0 +1,31 @@
+# feature_store.yaml
+# -------------------
+# This is the main Feast config file. Every Feast project needs one.
+#
+# WHY a feature store?
+#   Without a feature store, every data scientist writes their own
+#   feature engineering code. This causes:
+#     - Training/serving skew  (train on mean=7.5, serve on mean=8.0)
+#     - Duplicated work across teams
+#     - No versioning or lineage
+#   Feast solves all three problems.
+#
+# KEY CONCEPTS:
+#   project       – a namespace that groups related features
+#   provider      – where features are stored (local / GCP / AWS)
+#   registry      – the metadata catalog (what features exist)
+#   online_store  – fast, low-latency store for serving (Redis, DynamoDB…)
+#   offline_store – historical store for training (Parquet, BigQuery…)
+
+project: hotel_ml_pipeline
+provider: local
+
+registry:
+  path: registry.db          # SQLite file that Feast creates automatically
+
+online_store:
+  type: sqlite               # Use Redis/DynamoDB in production
+  path: online_store.db
+
+offline_store:
+  type: file                 # Use BigQuery/Snowflake in production

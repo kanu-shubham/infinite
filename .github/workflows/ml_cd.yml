@@ -1,0 +1,185 @@
+# ml_cd.yml
+# ----------
+# Continuous Delivery for the ML model.
+#
+# WHAT CD DOES FOR ML:
+#   Once CI passes on main, this workflow:
+#     1. Trains the model on the FULL dataset
+#     2. Evaluates against quality gates (RMSE < $35, R² > 0.85)
+#     3. If gates pass → promotes model to "Production" in MLflow Registry
+#     4. Deploys the FastAPI serving container
+#     5. Runs a smoke test against the deployed endpoint
+#
+# WHY SEPARATE CI AND CD?
+#   CI runs on every PR (cheap, fast, no prod side-effects).
+#   CD runs only on merges to main (expensive full train, real deployment).
+#
+# TRIGGER: push to main, only when ml_pipeline/** files change
+
+name: ML Pipeline – CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ml_pipeline/**"
+      - ".github/workflows/ml_cd.yml"
+
+  # Allow manual trigger with custom hyperparams
+  workflow_dispatch:
+    inputs:
+      n_estimators:
+        description: "Number of trees"
+        required: false
+        default: "300"
+      learning_rate:
+        description: "XGBoost learning rate"
+        required: false
+        default: "0.05"
+
+env:
+  # In a real project these would come from GitHub Secrets
+  MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI || 'sqlite:///mlruns.db' }}
+  MODEL_NAME: hotel-price-predictor
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/hotel-price-api
+
+jobs:
+  # ── Job 1: Full training ──────────────────────────────────────────────────
+  train:
+    name: Full Training Run
+    runs-on: ubuntu-latest
+
+    outputs:
+      mlflow_run_id: ${{ steps.train.outputs.run_id }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install pandas numpy scikit-learn xgboost mlflow joblib
+
+      - name: Generate training data
+        run: python ml_pipeline/data/generate_data.py
+
+      - name: Train model
+        id: train
+        run: |
+          cd ml_pipeline
+          python -c "
+          from training.train import train
+          run_id, _, _ = train(
+              n_estimators=${{ github.event.inputs.n_estimators || 300 }},
+              learning_rate=${{ github.event.inputs.learning_rate || 0.05 }},
+          )
+          print(f'run_id={run_id}')
+          " | tee train_output.txt
+          RUN_ID=$(grep 'run_id=' train_output.txt | cut -d= -f2)
+          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+
+      - name: Upload MLflow artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlflow-production-run
+          path: mlruns/
+
+  # ── Job 2: Evaluate & quality gate ───────────────────────────────────────
+  evaluate:
+    name: Evaluate & Quality Gate
+    runs-on: ubuntu-latest
+    needs: train
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install pandas numpy scikit-learn xgboost mlflow joblib
+
+      - name: Download MLflow artefacts
+        uses: actions/download-artifact@v4
+        with:
+          name: mlflow-production-run
+          path: mlruns/
+
+      - name: Generate data (for test split)
+        run: python ml_pipeline/data/generate_data.py
+
+      - name: Run quality gate evaluation
+        # evaluate.py exits with code 1 if model doesn't meet thresholds,
+        # which automatically fails this job and blocks deployment.
+        run: |
+          cd ml_pipeline
+          python training/evaluate.py
+
+  # ── Job 3: Build & push Docker image ─────────────────────────────────────
+  docker-build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: evaluate
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ml_pipeline
+          file:    ./ml_pipeline/Dockerfile
+          push:    true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+  # ── Job 4: Deploy & smoke test ────────────────────────────────────────────
+  deploy:
+    name: Deploy & Smoke Test
+    runs-on: ubuntu-latest
+    needs: docker-build
+    environment: production   # requires manual approval in GitHub
+
+    steps:
+      - name: Deploy to production
+        run: |
+          echo "Deploying ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          # In a real project this would call kubectl, AWS ECS, or Cloud Run:
+          # kubectl set image deployment/hotel-price-api \
+          #   api=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Smoke test deployed endpoint
+        run: |
+          # Wait for the new pod to become ready, then hit /predict
+          sleep 10
+          curl -f -X POST "${{ secrets.API_BASE_URL }}/predict" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "hotel_id": 1,
+              "city": "Paris",
+              "category": "Luxury",
+              "star_rating": 5,
+              "review_score": 9.0,
+              "num_reviews": 500,
+              "distance_km": 1.0,
+              "amenities": 15,
+              "rooms_available": 3
+            }'
+          echo "Smoke test PASSED"
