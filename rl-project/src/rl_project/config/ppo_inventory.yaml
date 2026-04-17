@@ -1,0 +1,28 @@
+# PPO on the continuous InventoryEnv.
+env:
+  name: inventory
+  action_mode: continuous
+  horizon: 60
+
+train:
+  total_steps: 200000
+  eval_every: 10000
+  eval_episodes: 20
+  seed: 42
+  log_dir: runs/ppo_inventory
+
+agent:
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_eps: 0.2
+  lr: 0.0003
+  num_envs: 8
+  rollout_length: 128
+  epochs: 10
+  minibatch_size: 64
+  value_coef: 0.5
+  entropy_coef: 0.0
+  grad_clip: 0.5
+  target_kl: 0.02
+  hidden: [64, 64]
+  normalize_advantages: true

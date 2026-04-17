@@ -1,0 +1,27 @@
+# DQN on the discrete InventoryEnv.
+env:
+  name: inventory
+  action_mode: discrete
+  horizon: 60
+
+train:
+  total_steps: 50000
+  eval_every: 5000
+  eval_episodes: 20
+  seed: 42
+  log_dir: runs/dqn_inventory
+
+agent:
+  gamma: 0.99
+  lr: 0.001
+  batch_size: 128
+  buffer_size: 50000
+  min_buffer: 1000
+  target_tau: 0.005
+  train_every: 1
+  epsilon_start: 1.0
+  epsilon_end: 0.05
+  epsilon_decay_steps: 20000
+  grad_clip: 10.0
+  hidden: [128, 128]
+  double_dqn: true
