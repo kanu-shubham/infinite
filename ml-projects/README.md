@@ -11,7 +11,7 @@ pip install -r requirements.txt
 
 ---
 
-## Beginner Projects (01–07)
+## Beginner Projects (01–07, 21–23)
 
 | # | Project | ML Type | Key Concepts |
 |---|---------|---------|--------------|
@@ -22,6 +22,9 @@ pip install -r requirements.txt
 | 5 | [Spam Classifier](05_spam_classifier.py) | NLP | TF-IDF, Naive Bayes, text pipelines |
 | 6 | [Sentiment Analysis](06_sentiment_analysis.py) | NLP | Bag-of-Words, SVM, model comparison |
 | 7 | [Customer Segmentation](07_customer_segmentation.py) | Clustering | K-Means, Elbow Method, PCA |
+| 21 | [SVM](21_svm.py) | Classification | Margin, support vectors, kernel trick (RBF/Poly/Linear), C parameter |
+| 22 | [PCA & Dimensionality Reduction](22_pca_dimensionality_reduction.py) | Unsupervised | Explained variance, scree plot, compression, t-SNE |
+| 23 | [Neural Network from Scratch](23_neural_network_from_scratch.py) | Deep Learning | Backprop, chain rule, gradient checking — NumPy only |
 
 ## Intermediate Projects (08–12)
 
