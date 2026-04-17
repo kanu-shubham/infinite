@@ -33,7 +33,7 @@ pip install -r requirements.txt
 | 11 | [Feature Engineering](11_feature_engineering.py) | Regression | Encoding, interactions, selection, step-by-step impact |
 | 12 | [MLOps Basics](12_mlops_basics.py) | MLOps | Model save/load, experiment tracking, reproducibility |
 
-## Deep Learning Projects (13–19)
+## Deep Learning Projects (13–20)
 
 | # | Project | Framework | Key Concepts |
 |---|---------|-----------|--------------|
@@ -44,6 +44,7 @@ pip install -r requirements.txt
 | 17 | [Transformers & Attention](17_transformers_attention.py) | PyTorch | Self-attention, multi-head attention, positional encoding |
 | 18 | [Transfer Learning ResNet](18_transfer_learning_resnet.py) | PyTorch | ResNet, feature extraction vs fine-tuning, residual blocks |
 | 19 | [BERT Fine-Tuning](19_bert_fine_tuning.py) | HuggingFace | BERT, WordPiece tokenization, [CLS] token, warmup LR |
+| 20 | [Cross-Attention](20_cross_attention.py) | PyTorch | Cross-attention, encoder-decoder, seq2seq, causal mask, teacher forcing |
 
 ---
 
@@ -66,7 +67,7 @@ Each script prints results to the terminal and saves `.png` visualizations in th
 8 → 9 → 10 → 11 → 12
 
 **Deep Learning (after intermediate):**
-13 → 14 → 15 → 16 → 17 → 18 → 19
+13 → 14 → 15 → 16 → 17 → 18 → 19 → 20
 
 ---
 
