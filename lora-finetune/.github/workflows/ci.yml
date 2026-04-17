@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+    paths:
+      - "lora-finetune/**"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    paths:
+      - "lora-finetune/**"
+
+defaults:
+  run:
+    working-directory: lora-finetune
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+      - name: Install CPU-only test deps
+        run: |
+          python -m pip install --upgrade pip
+          # Skip heavy GPU packages in CI; install the minimal surface needed by tests.
+          pip install \
+            "torch>=2.3.0" --index-url https://download.pytorch.org/whl/cpu
+          pip install \
+            "transformers>=4.44.0" "peft>=0.12.0" "datasets>=2.20.0" \
+            "pydantic>=2.7.0" "pyyaml>=6.0.1" "typer>=0.12.0" "rich>=13.7.0" \
+            "fastapi>=0.111.0" "httpx>=0.27.0" "prometheus-client>=0.20.0" \
+            "python-json-logger>=2.0.7" "pytest>=8.2.0" "pytest-asyncio>=0.23.0" \
+            "pytest-cov>=5.0.0" "ruff>=0.5.0"
+          pip install -e . --no-deps
+      - name: Ruff lint
+        run: ruff check src tests
+      - name: Tests
+        run: pytest -q --no-cov tests/test_config.py tests/test_templates.py tests/test_collator.py tests/test_metrics.py tests/test_api.py tests/test_cli.py

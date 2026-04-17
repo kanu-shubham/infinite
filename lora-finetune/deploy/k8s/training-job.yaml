@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: lora-finetune-train
+  labels:
+    app: lora-finetune
+    component: training
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: lora-finetune
+        component: training
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        nvidia.com/gpu.product: NVIDIA-A100-SXM4-80GB
+      containers:
+        - name: trainer
+          image: ghcr.io/ORG/lora-finetune:train-latest
+          imagePullPolicy: IfNotPresent
+          args: ["train", "--config", "/configs/qlora_llama3_8b.yaml"]
+          env:
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef: {name: hf-secrets, key: token}
+            - name: MLFLOW_TRACKING_URI
+              value: http://mlflow.mlops.svc.cluster.local:5000
+            - name: NCCL_DEBUG
+              value: WARN
+          resources:
+            requests: {cpu: "8", memory: 64Gi, nvidia.com/gpu: "1"}
+            limits:   {cpu: "16", memory: 128Gi, nvidia.com/gpu: "1"}
+          volumeMounts:
+            - {name: configs, mountPath: /configs}
+            - {name: cache, mountPath: /workspace/.cache/huggingface}
+            - {name: outputs, mountPath: /workspace/outputs}
+      volumes:
+        - name: configs
+          configMap: {name: lora-finetune-configs}
+        - name: cache
+          persistentVolumeClaim: {claimName: hf-cache}
+        - name: outputs
+          persistentVolumeClaim: {claimName: lora-outputs}

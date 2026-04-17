@@ -1,0 +1,72 @@
+# QLoRA fine-tuning of Llama-3-8B-Instruct on a chat-style dataset.
+experiment: qlora-llama3-8b-instruct
+
+model:
+  name_or_path: meta-llama/Meta-Llama-3-8B-Instruct
+  torch_dtype: bfloat16
+  attn_implementation: sdpa
+  gradient_checkpointing: true
+
+quantization:
+  enabled: true
+  load_in_4bit: true
+  bnb_4bit_quant_type: nf4
+  bnb_4bit_compute_dtype: bfloat16
+  bnb_4bit_use_double_quant: true
+
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  bias: none
+  task_type: CAUSAL_LM
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+
+data:
+  dataset_name: HuggingFaceH4/ultrachat_200k
+  prompt_field: prompt
+  response_field: response
+  template: llama3
+  system_prompt: "You are a helpful, concise assistant."
+  max_seq_length: 2048
+  eval_split_ratio: 0.01
+  num_proc: 8
+
+training:
+  output_dir: ${OUTPUT_DIR:-outputs}
+  run_name: qlora-llama3-8b-${HOSTNAME:-local}
+  num_train_epochs: 1.0
+  per_device_train_batch_size: 4
+  per_device_eval_batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 2.0e-4
+  warmup_ratio: 0.03
+  lr_scheduler_type: cosine
+  max_grad_norm: 0.3
+  optim: paged_adamw_8bit
+  bf16: true
+  fp16: false
+  tf32: true
+  logging_steps: 10
+  eval_strategy: steps
+  eval_steps: 200
+  save_strategy: steps
+  save_steps: 200
+  save_total_limit: 3
+  load_best_model_at_end: true
+  report_to: [mlflow]
+  early_stopping_patience: 3
+
+evaluation:
+  metrics: [loss, perplexity]
+  max_new_tokens: 256
+
+serving:
+  max_concurrency: 8

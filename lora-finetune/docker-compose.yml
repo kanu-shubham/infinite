@@ -1,0 +1,55 @@
+services:
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.14.1
+    command: >
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --default-artifact-root /mlflow/artifacts
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/mlflow
+
+  train:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.train
+    image: lora-finetune:train
+    env_file: .env
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    volumes:
+      - ./:/workspace
+      - hf_cache:/workspace/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    depends_on: [mlflow]
+    profiles: ["train"]
+    command: ["train", "--config", "configs/qlora_llama3_8b.yaml"]
+
+  serve:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.serve
+    image: lora-finetune:serve
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./outputs:/workspace/outputs:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  mlflow_data:
+  hf_cache:

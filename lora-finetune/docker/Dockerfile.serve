@@ -1,0 +1,21 @@
+FROM nvcr.io/nvidia/pytorch:24.05-py3
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    TOKENIZERS_PARALLELISM=false \
+    API_HOST=0.0.0.0 \
+    API_PORT=8000
+
+WORKDIR /workspace
+
+COPY requirements.txt pyproject.toml ./
+COPY src ./src
+RUN pip install --upgrade pip && pip install -e .
+
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+    CMD curl -fsS "http://localhost:${API_PORT}/health" || exit 1
+
+ENTRYPOINT ["lora-finetune", "serve"]
+CMD ["--model", "/workspace/outputs/merged", "--host", "0.0.0.0", "--port", "8000"]
