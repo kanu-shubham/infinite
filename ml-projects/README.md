@@ -49,6 +49,17 @@ pip install -r requirements.txt
 | 19 | [BERT Fine-Tuning](19_bert_fine_tuning.py) | HuggingFace | BERT, WordPiece tokenization, [CLS] token, warmup LR |
 | 20 | [Cross-Attention](20_cross_attention.py) | PyTorch | Cross-attention, encoder-decoder, seq2seq, causal mask, teacher forcing |
 
+## Advanced Projects (24–29)
+
+| # | Project | ML Type | Key Concepts |
+|---|---------|---------|--------------|
+| 24 | [Recommender Systems](24_recommender_systems.py) | Unsupervised / Deep Learning | Matrix factorization, Neural CF, Two-Tower model, Precision@K |
+| 25 | [Graph Neural Networks](25_graph_neural_networks.py) | Deep Learning | GCN from scratch, GraphSAGE, message passing, node classification |
+| 26 | [Bayesian ML](26_bayesian_ml.py) | Probabilistic ML | Gaussian Processes, MC Dropout, uncertainty estimation, Optuna |
+| 27 | [MLflow Tracking](27_mlflow_tracking.py) | MLOps | Real MLflow, experiment tracking, model registry, autolog |
+| 28 | [GANs & Diffusion Models](28_gans_diffusion.py) | Generative AI | GAN training loop, DDPM, noise schedule, reverse diffusion |
+| 29 | [Reinforcement Learning](29_reinforcement_learning.py) | RL | Q-Learning, DQN, replay buffer, REINFORCE policy gradient |
+
 ---
 
 ## Running a Project
@@ -71,6 +82,9 @@ Each script prints results to the terminal and saves `.png` visualizations in th
 
 **Deep Learning (after intermediate):**
 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20
+
+**Advanced (after deep learning):**
+21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29
 
 ---
 
