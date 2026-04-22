@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environments
+.env
+.env.local
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Training artifacts
+outputs/
+checkpoints/
+runs/
+wandb/
+logs/
+*.bin
+*.safetensors
+*.pt
+*.pth
+
+# Data (keep examples, ignore bulk)
+data/*
+!data/examples/
+!data/examples/*.jsonl
+!data/.gitkeep
+
+# Model cache
+.cache/
+models/
+hf_cache/
+
+# OS
+.DS_Store
+Thumbs.db

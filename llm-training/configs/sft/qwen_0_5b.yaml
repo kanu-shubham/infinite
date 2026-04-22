@@ -1,0 +1,54 @@
+# SFT on Qwen2.5-0.5B-Instruct with LoRA.
+# Target hardware: a single 24 GB GPU.
+task: sft
+
+model:
+  name_or_path: Qwen/Qwen2.5-0.5B-Instruct
+  dtype: bf16
+  attn_implementation: sdpa
+
+tokenizer:
+  model_max_length: 2048
+
+data:
+  train_path: data/examples/sft_sample.jsonl
+  eval_path: data/examples/sft_sample.jsonl
+  format: jsonl
+  num_workers: 2
+  shuffle: true
+  seed: 42
+
+lora:
+  enabled: true
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: all-linear
+
+optimizer:
+  learning_rate: 2.0e-4       # higher LR is fine for LoRA
+  weight_decay: 0.0
+  warmup_ratio: 0.03
+  lr_scheduler_type: cosine
+  optim: adamw_torch_fused
+
+training:
+  output_dir: outputs/sft_qwen_0_5b
+  num_train_epochs: 1
+  per_device_train_batch_size: 4
+  per_device_eval_batch_size: 4
+  gradient_accumulation_steps: 4
+  gradient_checkpointing: true
+  bf16: true
+  logging_steps: 10
+  eval_steps: 100
+  save_steps: 200
+  save_total_limit: 3
+  eval_strategy: steps
+  save_strategy: steps
+  report_to: [wandb]
+  run_name: sft_qwen_0_5b
+  seed: 42
+
+completion_only_loss: true
+packing: false

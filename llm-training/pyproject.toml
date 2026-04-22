@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-train"
+version = "0.1.0"
+description = "Production-grade LLM post-training: SFT, DPO, and knowledge distillation."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "LLM Train Team" }]
+keywords = ["llm", "sft", "dpo", "rlhf", "distillation", "peft", "lora"]
+
+dependencies = [
+    "torch>=2.3",
+    "transformers>=4.45",
+    "trl>=0.11",
+    "peft>=0.13",
+    "accelerate>=0.34",
+    "datasets>=3.0",
+    "bitsandbytes>=0.44; platform_system != 'Darwin'",
+    "sentencepiece>=0.2",
+    "protobuf>=4.25",
+    "pydantic>=2.8",
+    "pyyaml>=6.0",
+    "typer>=0.12",
+    "rich>=13.7",
+    "numpy>=1.26",
+    "scipy>=1.13",
+    "tqdm>=4.66",
+    "python-json-logger>=2.0",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "wandb>=0.18",
+    "evaluate>=0.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=5.0",
+    "pytest-mock>=3.14",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pre-commit>=3.8",
+    "types-PyYAML",
+]
+flash = ["flash-attn>=2.6; platform_system != 'Darwin'"]
+
+[project.scripts]
+llm-train = "llm_train.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "PL"]
+ignore = ["PLR0913", "PLR2004", "E501"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = false
+ignore_missing_imports = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+    "slow: marks tests as slow (requires GPU or large models)",
+    "gpu: requires a CUDA device",
+]

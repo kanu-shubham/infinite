@@ -1,0 +1,63 @@
+# DPO on Qwen2.5-0.5B-Instruct starting from an SFT checkpoint.
+# Point `model.name_or_path` at the merged SFT output (or the LoRA-wrapped
+# checkpoint if staying in PEFT-mode end-to-end).
+task: dpo
+
+model:
+  name_or_path: outputs/sft_qwen_0_5b     # or Qwen/Qwen2.5-0.5B-Instruct
+  dtype: bf16
+  attn_implementation: sdpa
+
+# Omit ref_model when LoRA is enabled — TRL reconstructs the reference by
+# disabling the adapter. With full fine-tuning, set this explicitly.
+ref_model: null
+
+tokenizer:
+  model_max_length: 2048
+
+data:
+  train_path: data/examples/dpo_sample.jsonl
+  eval_path: data/examples/dpo_sample.jsonl
+  format: jsonl
+  num_workers: 2
+  shuffle: true
+  seed: 42
+
+lora:
+  enabled: true
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: all-linear
+
+optimizer:
+  learning_rate: 5.0e-6       # DPO is sensitive to LR — keep it low
+  weight_decay: 0.0
+  warmup_ratio: 0.1
+  lr_scheduler_type: cosine
+  optim: adamw_torch_fused
+
+training:
+  output_dir: outputs/dpo_qwen_0_5b
+  num_train_epochs: 1
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 8
+  gradient_checkpointing: true
+  bf16: true
+  logging_steps: 10
+  eval_steps: 100
+  save_steps: 200
+  save_total_limit: 2
+  eval_strategy: steps
+  save_strategy: steps
+  report_to: [wandb]
+  run_name: dpo_qwen_0_5b
+  seed: 42
+
+# DPO hyperparameters
+beta: 0.1                       # 0.1–0.5; higher = closer to SFT policy
+loss_type: sigmoid              # "sigmoid" (DPO), "ipo", "hinge", "kto_pair"
+label_smoothing: 0.0
+max_prompt_length: 1024
+max_length: 2048

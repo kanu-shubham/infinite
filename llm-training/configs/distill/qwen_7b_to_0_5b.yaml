@@ -1,0 +1,64 @@
+# Logit-level distillation: Qwen2.5-7B-Instruct teacher → 0.5B student.
+# Teacher and student MUST share the same tokenizer / vocabulary.
+task: distill
+
+student:
+  name_or_path: Qwen/Qwen2.5-0.5B
+  dtype: bf16
+  attn_implementation: sdpa
+
+teacher:
+  name_or_path: Qwen/Qwen2.5-7B-Instruct
+  dtype: bf16
+  attn_implementation: sdpa
+  # Quantize the teacher if it doesn't fit — inference-only, no quality hit
+  # matters much since it's the target distribution.
+  load_in_4bit: false
+
+tokenizer:
+  model_max_length: 2048
+
+data:
+  train_path: data/examples/sft_sample.jsonl
+  eval_path: data/examples/sft_sample.jsonl
+  format: jsonl
+  num_workers: 2
+  shuffle: true
+  seed: 42
+
+lora:
+  enabled: false       # distilling a small student — full FT is fine
+  r: 16
+  alpha: 32
+
+optimizer:
+  learning_rate: 5.0e-5
+  weight_decay: 0.0
+  warmup_ratio: 0.03
+  lr_scheduler_type: cosine
+  optim: adamw_torch_fused
+
+training:
+  output_dir: outputs/distill_qwen_7b_to_0_5b
+  num_train_epochs: 1
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 8
+  gradient_checkpointing: true
+  bf16: true
+  logging_steps: 10
+  eval_steps: 200
+  save_steps: 500
+  save_total_limit: 2
+  eval_strategy: steps
+  save_strategy: steps
+  report_to: [wandb]
+  run_name: distill_qwen_7b_to_0_5b
+  seed: 42
+
+# Distillation hyperparameters
+mode: logit
+temperature: 2.0         # T>1 softens distributions; 2.0 is a strong default
+alpha_ce: 0.5            # weight on student CE vs. hard labels
+alpha_kd: 0.5            # weight on KL(student || teacher)
+top_k_logits: 50         # restrict KL to teacher's top-k (null = full vocab)
