@@ -3,10 +3,12 @@ import useHotelFilters from "./hooks/useHotelFilters";
 import useHotels from "./hooks/useHotels";
 import useAllHotels from "./hooks/useAllHotels";
 import useInfiniteScroll from "./hooks/useInfiniteScroll";
+import useHotelMemory from "./hooks/useHotelMemory";
 import HotelFilters from "./components/HotelFilters";
 import HotelSort from "./components/HotelSort";
 import HotelList from "./components/HotelList";
 import VirtualHotelList from "./components/VirtualHotelList";
+import MemoryPanel from "./components/MemoryPanel";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import "./HotelListingPage.css";
 
@@ -56,6 +58,13 @@ export default function HotelListingPage() {
 
   const sentinelRef = useInfiniteScroll(loadMore, {
     enabled: hasMore && !isLoading && !error,
+  });
+
+  // ── Memory integration: observe filters, expose Save/Hide, mount panel ──
+  const { saveHotel, hideHotel } = useHotelMemory({
+    filters,
+    sortBy,
+    hasActiveFilters,
   });
 
   return (
@@ -150,10 +159,14 @@ export default function HotelListingPage() {
               isLoading={isLoading}
               hasMore={hasMore}
               sentinelRef={sentinelRef}
+              onSave={saveHotel}
+              onHide={hideHotel}
             />
           )}
         </section>
       )}
+
+      <MemoryPanel query={filters.search} />
     </div>
   );
 }

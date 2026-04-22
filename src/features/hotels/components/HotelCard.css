@@ -116,3 +116,40 @@
   background: #e0e7ff;
   color: #4338ca;
 }
+
+.hotel-card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.hotel-card__action {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.hotel-card__action--save {
+  background: #2563eb;
+  color: #fff;
+}
+
+.hotel-card__action--save:hover {
+  background: #1d4ed8;
+}
+
+.hotel-card__action--hide {
+  background: #fff;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.hotel-card__action--hide:hover {
+  background: #f1f5f9;
+}

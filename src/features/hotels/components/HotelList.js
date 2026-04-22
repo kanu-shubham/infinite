@@ -4,7 +4,7 @@ import HotelSkeletonGrid from "./HotelSkeleton";
 import LoadingSpinner from "../../../components/common/LoadingSpinner";
 import "./HotelList.css";
 
-export default function HotelList({ hotels, isLoading, hasMore, sentinelRef }) {
+export default function HotelList({ hotels, isLoading, hasMore, sentinelRef, onSave, onHide }) {
   // Initial load — no hotels yet, show skeleton grid instead of spinner
   if (isLoading && hotels.length === 0) {
     return <HotelSkeletonGrid count={8} />;
@@ -25,7 +25,7 @@ export default function HotelList({ hotels, isLoading, hasMore, sentinelRef }) {
     <div className="hotel-list">
       <div className="hotel-list__grid">
         {hotels.map((hotel) => (
-          <HotelCard key={hotel.id} hotel={hotel} />
+          <HotelCard key={hotel.id} hotel={hotel} onSave={onSave} onHide={onHide} />
         ))}
       </div>
 

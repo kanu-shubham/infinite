@@ -18,7 +18,7 @@ const StarRating = memo(function StarRating({ rating }) {
   );
 });
 
-const HotelCard = memo(function HotelCard({ hotel }) {
+const HotelCard = memo(function HotelCard({ hotel, onSave, onHide }) {
   return (
     <article className="hotel-card">
       <div className="hotel-card__image-wrapper">
@@ -48,6 +48,30 @@ const HotelCard = memo(function HotelCard({ hotel }) {
             </span>
           )}
         </div>
+        {(onSave || onHide) && (
+          <div className="hotel-card__actions">
+            {onSave && (
+              <button
+                type="button"
+                className="hotel-card__action hotel-card__action--save"
+                onClick={() => onSave(hotel)}
+                aria-label={`Save ${hotel.name} to memory`}
+              >
+                Save
+              </button>
+            )}
+            {onHide && (
+              <button
+                type="button"
+                className="hotel-card__action hotel-card__action--hide"
+                onClick={() => onHide(hotel)}
+                aria-label={`Hide ${hotel.name}`}
+              >
+                Hide
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </article>
   );
