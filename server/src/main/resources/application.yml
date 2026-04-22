@@ -1,0 +1,51 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: netflix-bot
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/netflixbot}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  ai:
+    # Chat: Claude handles reasoning, recommendations, tool calling
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY}
+      chat:
+        options:
+          model: claude-sonnet-4-6
+          temperature: 0.4
+          max-tokens: 1024
+
+    # Embeddings: OpenAI (Anthropic has no embeddings endpoint)
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      embedding:
+        options:
+          model: text-embedding-3-small
+      # Disable OpenAI chat auto-config so Claude is the primary ChatModel
+      chat:
+        enabled: false
+
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 1536
+        initialize-schema: true
+        table-name: catalog_embeddings
+
+logging:
+  level:
+    com.infinite.netflixbot: DEBUG
+    org.springframework.ai: INFO
