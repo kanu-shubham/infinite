@@ -1,0 +1,100 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>JWT tutorial client</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    fieldset { margin-bottom: 1rem; }
+    pre { background: #f4f4f4; padding: .75rem; border-radius: 4px; overflow-x: auto; }
+    button { margin-right: .5rem; }
+    .muted { color: #666; font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <h1>JWT tutorial</h1>
+  <p class="muted">
+    The access token lives only in the JS variable below. Refresh the page and it's gone
+    — the app will call <code>/auth/refresh</code>, which uses the HttpOnly cookie
+    the browser kept, to mint a new one.
+  </p>
+
+  <fieldset>
+    <legend>Login</legend>
+    <input id="u" placeholder="username" value="alice" />
+    <input id="p" type="password" placeholder="password" value="password123" />
+    <button id="loginBtn">Log in</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>Actions</legend>
+    <button id="meBtn">GET /api/me (needs access token)</button>
+    <button id="sessionsBtn">GET /api/sessions</button>
+    <button id="refreshBtn">POST /auth/refresh (rotate)</button>
+    <button id="logoutBtn">POST /auth/logout</button>
+  </fieldset>
+
+  <h3>In-memory access token</h3>
+  <pre id="tokenBox">(none)</pre>
+
+  <h3>Last response</h3>
+  <pre id="out">(nothing yet)</pre>
+
+<script>
+  // *** Access token lives HERE — a module-scoped variable. ***
+  // Not localStorage, not sessionStorage, not a cookie. An XSS payload can
+  // still read it from this running page, but it can't persist across
+  // reloads or be stolen from another tab. That's the best a browser-side
+  // store can do.
+  let accessToken = null;
+
+  const $ = (id) => document.getElementById(id);
+  const show = (o) => { $('out').textContent = JSON.stringify(o, null, 2); };
+  const renderToken = () => { $('tokenBox').textContent = accessToken || '(none)'; };
+
+  // Read the CSRF cookie the server set, echo it back in a header.
+  // The attacker site can't read our cookies, so it can't forge the header.
+  function csrfHeader() {
+    const match = document.cookie.match(/(?:^|;\s*)csrfToken=([^;]+)/);
+    return match ? { 'X-CSRF-Token': decodeURIComponent(match[1]) } : {};
+  }
+
+  async function api(path, opts = {}) {
+    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+    if (accessToken) headers.Authorization = 'Bearer ' + accessToken;
+    if (opts.csrf) Object.assign(headers, csrfHeader());
+    const res = await fetch(path, { ...opts, headers, credentials: 'include' });
+    const body = await res.json().catch(() => ({}));
+    return { status: res.status, body };
+  }
+
+  $('loginBtn').onclick = async () => {
+    const r = await api('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: $('u').value, password: $('p').value }),
+    });
+    if (r.status === 200) accessToken = r.body.accessToken;
+    renderToken();
+    show(r);
+  };
+
+  $('meBtn').onclick = async () => show(await api('/api/me'));
+
+  $('sessionsBtn').onclick = async () => show(await api('/api/sessions'));
+
+  $('refreshBtn').onclick = async () => {
+    const r = await api('/auth/refresh', { method: 'POST', csrf: true });
+    if (r.status === 200) accessToken = r.body.accessToken;
+    renderToken();
+    show(r);
+  };
+
+  $('logoutBtn').onclick = async () => {
+    const r = await api('/auth/logout', { method: 'POST', csrf: true });
+    if (r.status === 200) accessToken = null;
+    renderToken();
+    show(r);
+  };
+</script>
+</body>
+</html>
