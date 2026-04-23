@@ -1,0 +1,78 @@
+spring:
+  application:
+    name: booking-service
+
+  # Default: embedded H2 so the app runs with zero setup.
+  # Switch to the `docker` profile (or set env vars) for Postgres + real Kafka.
+  datasource:
+    url: jdbc:h2:mem:bookings;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+    hikari:
+      maximum-pool-size: 40          # must be >= worker thread pool to avoid starvation
+      minimum-idle: 10
+      connection-timeout: 2000
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 50
+
+  h2:
+    console:
+      enabled: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      timeout: 2s
+
+  cache:
+    type: redis
+    redis:
+      time-to-live: 60000            # 60s TTL by default for @Cacheable entries
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+    consumer:
+      group-id: booking-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.bookmyshow.*"
+    listener:
+      ack-mode: record
+
+server:
+  port: 8080
+  tomcat:
+    threads:
+      max: 200       # Tomcat worker threads - upper bound on concurrent HTTP requests
+      min-spare: 20
+    accept-count: 100
+    max-connections: 2000
+
+booking:
+  seat-lock-ttl-seconds: 60          # how long a held seat stays locked before it auto-releases
+  payment:
+    thread-pool-size: 20             # size of async payment executor
+    simulated-latency-ms: 200
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,caches
