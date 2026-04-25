@@ -1,2 +1,7 @@
 node_modules
 build
+
+# Java
+java-concurrency/out/
+java-concurrency/downloads/
+*.class
