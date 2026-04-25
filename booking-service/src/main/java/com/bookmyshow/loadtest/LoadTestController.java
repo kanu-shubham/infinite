@@ -1,5 +1,6 @@
 package com.bookmyshow.loadtest;
 
+import com.bookmyshow.broken.SynchronizedBookingService;
 import com.bookmyshow.dto.BookingRequest;
 import com.bookmyshow.dto.BookingResponse;
 import com.bookmyshow.service.BookingService;
@@ -35,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class LoadTestController {
 
     private final BookingService bookings;
+    private final SynchronizedBookingService brokenBookings;
 
     @PostMapping
     public Map<String, Object> hammer(
@@ -64,9 +66,10 @@ public class LoadTestController {
                     String idem = UUID.randomUUID().toString();
 
                     BookingResponse r = switch (strategy) {
-                        case "pessimistic" -> bookings.bookPessimistic(req, idem);
-                        case "distributed" -> bookings.bookWithDistributedLock(req, idem);
-                        default             -> bookings.bookOptimistic(req, idem);
+                        case "pessimistic"          -> bookings.bookPessimistic(req, idem);
+                        case "distributed"          -> bookings.bookWithDistributedLock(req, idem);
+                        case "broken-synchronized"  -> brokenBookings.bookBroken(req, idem);
+                        default                     -> bookings.bookOptimistic(req, idem);
                     };
                     if (r != null) success.incrementAndGet();
                 } catch (com.bookmyshow.exception.SeatUnavailableException

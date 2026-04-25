@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: temporal-worker
+
+server:
+  port: 8083
+
+# Temporal SDK config: connects to a temporal server (run via temporalio/auto-setup docker image)
+spring.temporal:
+  connection:
+    target: ${TEMPORAL_TARGET:localhost:7233}
+  workersAutoDiscovery:
+    packages:
+      - com.bookmyshow.temporal
+  workers:
+    - taskQueue: booking-saga
+      name: booking-saga-worker
+      capacity:
+        maxConcurrentWorkflowTaskExecutors: 50
+        maxConcurrentActivityExecutors: 100

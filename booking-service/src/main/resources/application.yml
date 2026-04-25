@@ -46,13 +46,22 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       acks: all
       retries: 3
+      properties:
+        # Stamp every outgoing event with a short, stable type name so consumers in
+        # other services can deserialize without sharing our package layout.
+        spring.json.type.mapping: >
+          seatsReserved:com.bookmyshow.events.SeatsReservedEvent,
+          paymentCharged:com.bookmyshow.events.PaymentChargedEvent,
+          paymentFailed:com.bookmyshow.events.PaymentFailedEvent,
+          notificationSent:com.bookmyshow.events.NotificationSentEvent,
+          compensate:com.bookmyshow.events.BookingCompensateEvent
     consumer:
       group-id: booking-service
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring.json.trusted.packages: "com.bookmyshow.*"
+        spring.json.trusted.packages: "*"
     listener:
       ack-mode: record
 
@@ -70,6 +79,8 @@ booking:
   payment:
     thread-pool-size: 20             # size of async payment executor
     simulated-latency-ms: 200
+  outbox:
+    poll-delay-ms: 500               # how often the outbox publisher drains pending events
 
 management:
   endpoints:

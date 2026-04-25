@@ -1,0 +1,116 @@
+version: "3.8"
+
+# Full stack for the saga / outbox / read-model / circuit-breaker / multi-instance demos.
+#
+# Up-and-running checklist (see README for what each command demonstrates):
+#
+#   docker compose up -d redis kafka zookeeper postgres-booking postgres-payment postgres-notification
+#   (cd booking-service && mvn spring-boot:run)
+#   (cd payment-service && mvn spring-boot:run)
+#   (cd notification-service && mvn spring-boot:run)
+#
+# Multi-instance + nginx:
+#   docker compose up -d --scale booking-service=2 nginx
+#
+# Temporal (optional):
+#   docker compose up -d temporal
+#
+services:
+
+  # ---------- infrastructure ----------
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on: [zookeeper]
+    ports: ["9092:9092"]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+  # One Postgres instance per service - microservice rule "each service owns its DB".
+  postgres-booking:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: booking
+      POSTGRES_USER: bms
+      POSTGRES_PASSWORD: bms
+    ports: ["5432:5432"]
+
+  postgres-payment:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: payment
+      POSTGRES_USER: bms
+      POSTGRES_PASSWORD: bms
+    ports: ["5433:5432"]
+
+  postgres-notification:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: notification
+      POSTGRES_USER: bms
+      POSTGRES_PASSWORD: bms
+    ports: ["5434:5432"]
+
+  # Temporal server (optional - only if you want to run the temporal-worker module).
+  temporal:
+    image: temporalio/auto-setup:1.22.4
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: temporal
+      POSTGRES_SEEDS: postgres-temporal
+    depends_on: [postgres-temporal]
+    ports: ["7233:7233"]
+
+  postgres-temporal:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+
+  temporal-ui:
+    image: temporalio/ui:2.21.3
+    depends_on: [temporal]
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+    ports: ["8088:8080"]
+
+  # ---------- application services (run via mvn spring-boot:run by default;
+  #            uncomment for full containerized run after building docker images) ----------
+  # booking-service:
+  #   image: bookmyshow/booking-service:latest
+  #   environment:
+  #     KAFKA_BROKERS: kafka:29092
+  #     REDIS_HOST: redis
+  #     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-booking:5432/booking
+  #     SPRING_DATASOURCE_USERNAME: bms
+  #     SPRING_DATASOURCE_PASSWORD: bms
+  #   depends_on: [kafka, redis, postgres-booking]
+  #   expose: ["8080"]
+  #
+  # payment-service: ...
+  # notification-service: ...
+
+  nginx:
+    image: nginx:1.25-alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports: ["8090:80"]
+    # Only useful once you `--scale booking-service=N` (and uncomment that service above).

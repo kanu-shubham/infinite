@@ -1,0 +1,84 @@
+spring:
+  application:
+    name: payment-service
+
+  datasource:
+    url: jdbc:h2:mem:payments;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      properties:
+        spring.json.type.mapping: >
+          paymentCharged:com.bookmyshow.payment.events.PaymentChargedEvent,
+          paymentFailed:com.bookmyshow.payment.events.PaymentFailedEvent
+    consumer:
+      group-id: payment-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.type.mapping: >
+          seatsReserved:com.bookmyshow.payment.events.SeatsReservedEvent,
+          compensate:com.bookmyshow.payment.events.BookingCompensateEvent
+    listener:
+      ack-mode: record
+
+server:
+  port: 8081
+
+# Resilience4j tuning. Open after 50% failure rate over 10 calls,
+# then half-open after 5 seconds, allowing 3 probe calls.
+resilience4j:
+  circuitbreaker:
+    instances:
+      paymentGateway:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 5s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        recordExceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - com.bookmyshow.payment.service.PaymentGatewayException
+  timelimiter:
+    instances:
+      paymentGateway:
+        timeoutDuration: 2s
+        cancelRunningFuture: true
+  retry:
+    instances:
+      paymentGateway:
+        maxAttempts: 3
+        waitDuration: 200ms
+        retryExceptions:
+          - java.io.IOException
+          - com.bookmyshow.payment.service.PaymentGatewayException
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,circuitbreakers,circuitbreakerevents
+  health:
+    circuitbreakers:
+      enabled: true
+
+payment:
+  # Toggle this at runtime to "crash" the service mid-charge - simulates a partial failure.
+  fail-mode: ${PAYMENT_FAIL_MODE:none}    # none | always | random | slow
+  slow-delay-ms: ${PAYMENT_SLOW_MS:5000}
