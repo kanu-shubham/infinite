@@ -1,2 +1,13 @@
 node_modules
 build
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+
+# ML artefacts
+ml/artifacts/*.pt
+ml/artifacts/*.json
