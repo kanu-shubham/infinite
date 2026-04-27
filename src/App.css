@@ -9,3 +9,32 @@
 *, *::before, *::after {
   box-sizing: border-box;
 }
+
+.app-nav {
+  display: flex;
+  gap: 6px;
+  padding: 12px 24px;
+  background: #1d1d1f;
+  border-bottom: 1px solid #000;
+}
+
+.app-nav-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #c5c7cb;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.app-nav-btn:hover {
+  background: #2d2d31;
+  color: #fff;
+}
+
+.app-nav-btn.active {
+  background: #2466d1;
+  color: #fff;
+}

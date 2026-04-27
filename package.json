@@ -18,7 +18,9 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "pricing": "node server/index.js",
+    "pricing:test": "node --test \"server/__tests__/*.test.js\""
   },
   "browserslist": [
     ">0.2%",
