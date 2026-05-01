@@ -20,10 +20,50 @@ import textwrap
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+import time
+
 import anthropic
 
 from src.config import config
 from src.documents import Chunk, RetrievalResult
+
+
+# ---------------------------------------------------------------------------
+# Retry helper
+# ---------------------------------------------------------------------------
+
+def _with_retry(fn, max_retries: int = 4, base_delay: float = 2.0):
+    """
+    Exponential backoff retry for Anthropic API calls.
+
+    Retries on:
+      - RateLimitError  (429) — slow down and retry
+      - APIStatusError  (500, 529) — server overloaded, retry
+      - APIConnectionError — transient network failure
+
+    Raises immediately on:
+      - AuthenticationError (401) — bad API key, no point retrying
+      - BadRequestError (400) — malformed request, won't improve
+    """
+    for attempt in range(max_retries):
+        try:
+            return fn()
+        except anthropic.RateLimitError as e:
+            if attempt == max_retries - 1:
+                raise
+            delay = base_delay * (2 ** attempt)
+            time.sleep(delay)
+        except anthropic.APIStatusError as e:
+            if e.status_code in (500, 529):
+                if attempt == max_retries - 1:
+                    raise
+                time.sleep(base_delay * (2 ** attempt))
+            else:
+                raise
+        except anthropic.APIConnectionError:
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(base_delay * (2 ** attempt))
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +250,7 @@ class Generator:
             }
         ]
 
-        response = self._client.messages.create(
+        response = _with_retry(lambda: self._client.messages.create(
             model=config.model,
             max_tokens=config.max_tokens,
             temperature=config.temperature,
@@ -222,7 +262,7 @@ class Generator:
                 }
             ],
             messages=messages,
-        )
+        ))
 
         answer = response.content[0].text.strip()
 

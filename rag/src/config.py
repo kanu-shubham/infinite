@@ -51,6 +51,42 @@ class Config:
     raptor_cluster_size: int = 5   # chunks per cluster leaf
     raptor_max_levels: int = 3     # how many summary levels to build
 
+    # --- Vector store ---
+    # "memory" (default, no deps) or "faiss" (production, pip install faiss-cpu)
+    vector_store: str = field(
+        default_factory=lambda: os.environ.get("RAG_VECTOR_STORE", "memory")
+    )
+    index_path: str = field(
+        default_factory=lambda: os.environ.get("RAG_INDEX_PATH", "./rag_index")
+    )
+
+    # --- Embedder ---
+    # "tfidf" (default, no deps) or "sentence-transformers"
+    embedder: str = field(
+        default_factory=lambda: os.environ.get("RAG_EMBEDDER", "tfidf")
+    )
+    st_model: str = field(
+        default_factory=lambda: os.environ.get("RAG_ST_MODEL", "all-MiniLM-L6-v2")
+    )
+
+    # --- Hybrid search ---
+    hybrid_alpha: float = 0.5      # dense weight (1-alpha = sparse weight)
+
+    # --- Reranker ---
+    enable_reranker: bool = field(
+        default_factory=lambda: os.environ.get("RAG_RERANKER", "false").lower() == "true"
+    )
+    reranker_top_n: int = 20       # candidates passed to reranker
+
+    # --- Cache ---
+    cache_ttl: int = field(
+        default_factory=lambda: int(os.environ.get("RAG_CACHE_TTL", "3600"))
+    )
+
+    # --- Retry ---
+    max_retries: int = 4
+    retry_base_delay: float = 2.0
+
     def validate(self) -> None:
         if not self.anthropic_api_key:
             raise ValueError(

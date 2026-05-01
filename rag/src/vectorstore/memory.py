@@ -68,6 +68,18 @@ class InMemoryVectorStore:
         else:
             self._matrix = np.concatenate([self._matrix, new_matrix], axis=0)
 
+    def remove_chunks(self, chunk_ids: list) -> None:
+        """Remove chunks by ID, rebuilding the internal matrix."""
+        id_set = set(chunk_ids)
+        keep = [(c, c.embedding) for c in self._chunks if c.chunk_id not in id_set]
+        self._chunks = []
+        self._matrix = None
+        if keep:
+            chunks, embeddings = zip(*keep)
+            for chunk, emb in zip(chunks, embeddings):
+                chunk.embedding = emb
+            self.add_chunks(list(chunks))
+
     def clear(self) -> None:
         self._chunks = []
         self._matrix = None
