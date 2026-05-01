@@ -471,5 +471,390 @@ class TestObservability(unittest.TestCase):
         self.assertIn("ts", data)
 
 
+# ---------------------------------------------------------------------------
+# CrossEncoderReranker Tests
+# ---------------------------------------------------------------------------
+
+class TestCrossEncoderReranker(unittest.TestCase):
+
+    def _make_results(self, contents):
+        results = []
+        for i, text in enumerate(contents):
+            chunk = _chunk(text, chunk_id=f"c{i}")
+            results.append(RetrievalResult(chunk=chunk, score=1.0 - i * 0.1))
+        return results
+
+    def test_rerank_returns_top_k(self):
+        """CrossEncoderReranker returns at most k results."""
+        from src.retrieval.reranker import CrossEncoderReranker
+
+        mock_model = MagicMock()
+        mock_model.predict.return_value = np.array([0.9, 0.1, 0.5, 0.8, 0.3])
+
+        with patch("sentence_transformers.CrossEncoder", return_value=mock_model):
+            reranker = CrossEncoderReranker.__new__(CrossEncoderReranker)
+            reranker._model = mock_model
+            reranker._top_n = 20
+
+        results = self._make_results(["a", "b", "c", "d", "e"])
+        reranked = reranker.rerank("test query", results, k=3)
+        self.assertEqual(len(reranked), 3)
+
+    def test_rerank_orders_by_cross_encoder_score(self):
+        """Highest cross-encoder score should be first, regardless of original order."""
+        from src.retrieval.reranker import CrossEncoderReranker
+
+        mock_model = MagicMock()
+        # passage "b" gets highest score, "a" gets lowest
+        mock_model.predict.return_value = np.array([0.1, 0.9, 0.5])
+
+        reranker = CrossEncoderReranker.__new__(CrossEncoderReranker)
+        reranker._model = mock_model
+        reranker._top_n = 20
+
+        results = self._make_results(["a", "b", "c"])
+        reranked = reranker.rerank("query", results, k=3)
+        self.assertEqual(reranked[0].chunk.content, "b")
+        self.assertEqual(reranked[2].chunk.content, "a")
+
+    def test_rerank_empty_returns_empty(self):
+        """Empty input returns empty list without calling the model."""
+        from src.retrieval.reranker import CrossEncoderReranker
+
+        mock_model = MagicMock()
+        reranker = CrossEncoderReranker.__new__(CrossEncoderReranker)
+        reranker._model = mock_model
+        reranker._top_n = 20
+
+        result = reranker.rerank("query", [], k=5)
+        self.assertEqual(result, [])
+        mock_model.predict.assert_not_called()
+
+    def test_rerank_caps_candidates_at_top_n(self):
+        """Only top_n candidates are passed to the model."""
+        from src.retrieval.reranker import CrossEncoderReranker
+
+        mock_model = MagicMock()
+        mock_model.predict.return_value = np.array([0.5, 0.5])
+
+        reranker = CrossEncoderReranker.__new__(CrossEncoderReranker)
+        reranker._model = mock_model
+        reranker._top_n = 2  # only take first 2 of 5
+
+        results = self._make_results(["a", "b", "c", "d", "e"])
+        reranker.rerank("query", results, k=2)
+
+        pairs_passed = mock_model.predict.call_args[0][0]
+        self.assertEqual(len(pairs_passed), 2)
+
+    def test_import_error_raised_without_sentence_transformers(self):
+        """Should raise ImportError with helpful message if not installed."""
+        import importlib, sys
+        from src.retrieval.reranker import CrossEncoderReranker
+
+        with patch.dict(sys.modules, {"sentence_transformers": None}):
+            with self.assertRaises((ImportError, TypeError)):
+                CrossEncoderReranker(model_name="dummy")
+
+
+# ---------------------------------------------------------------------------
+# GraphRAG Tests (fully mocked — no real Claude calls)
+# ---------------------------------------------------------------------------
+
+class TestGraphRAG(unittest.TestCase):
+    """
+    Tests for GraphRAG logic using mocked Claude responses.
+    All API calls are intercepted; no network traffic occurs.
+    """
+
+    def _make_embedder(self, dim=8):
+        """A deterministic fake embedder."""
+        embedder = MagicMock()
+        embedder.dim = dim
+        embedder.embed_texts.side_effect = lambda texts: [
+            np.random.default_rng(i).random(dim).astype(np.float32)
+            for i, _ in enumerate(texts)
+        ]
+        embedder.embed_query.return_value = np.ones(dim, dtype=np.float32) / (dim ** 0.5)
+        return embedder
+
+    def _make_store_with_chunks(self, contents, dim=8):
+        store = InMemoryVectorStore()
+        rng = np.random.default_rng(42)
+        for i, text in enumerate(contents):
+            c = _chunk(text, chunk_id=f"chunk{i}")
+            c.embedding = rng.random(dim).astype(np.float32)
+            store.add_chunks([c])
+        return store
+
+    def _mock_extract_response(self, entities, relationships=None):
+        """Build a fake Claude response JSON for entity extraction."""
+        return json.dumps({
+            "entities": entities,
+            "relationships": relationships or [],
+        })
+
+    def _make_graph_rag(self, contents=None, dim=8):
+        from src.retrieval.graph_rag import GraphRAG
+        from src.generation.generator import Generator
+
+        contents = contents or [
+            "BERT is a transformer model developed by Google.",
+            "GPT-4 is a large language model made by OpenAI.",
+            "Google and OpenAI are leading AI research organisations.",
+        ]
+
+        store = self._make_store_with_chunks(contents, dim=dim)
+        embedder = self._make_embedder(dim=dim)
+        generator = MagicMock(spec=Generator)
+        generator.generate.return_value = MagicMock(
+            answer="Test answer",
+            citations=[],
+            metadata={},
+        )
+
+        rag = GraphRAG(store=store, embedder=embedder, generator=generator)
+        return rag, store, embedder, generator
+
+    # ------------------------------------------------------------------
+    # KnowledgeGraphBuilder
+    # ------------------------------------------------------------------
+
+    def test_extract_from_chunk_parses_entities(self):
+        from src.retrieval.graph_rag import KnowledgeGraphBuilder, Entity
+
+        mock_client = MagicMock()
+        mock_client.messages.create.return_value.content = [MagicMock(
+            text=self._mock_extract_response([
+                {"name": "BERT", "type": "CONCEPT", "description": "Transformer model"},
+                {"name": "Google", "type": "ORGANIZATION", "description": "Tech company"},
+            ])
+        )]
+
+        builder = KnowledgeGraphBuilder(mock_client)
+        chunk = _chunk("BERT was created by Google.", chunk_id="c1")
+        entities, relationships = builder.extract_from_chunk(chunk)
+
+        self.assertEqual(len(entities), 2)
+        self.assertEqual(entities[0].name, "BERT")
+        self.assertEqual(entities[1].entity_type, "ORGANIZATION")
+        self.assertEqual(entities[0].source_chunk_ids, ["c1"])
+
+    def test_extract_handles_malformed_json(self):
+        from src.retrieval.graph_rag import KnowledgeGraphBuilder
+
+        mock_client = MagicMock()
+        mock_client.messages.create.return_value.content = [
+            MagicMock(text="not valid json at all {{{")
+        ]
+
+        builder = KnowledgeGraphBuilder(mock_client)
+        chunk = _chunk("Some text", chunk_id="c1")
+        entities, relationships = builder.extract_from_chunk(chunk)
+
+        self.assertEqual(entities, [])
+        self.assertEqual(relationships, [])
+
+    def test_extract_strips_markdown_fences(self):
+        from src.retrieval.graph_rag import KnowledgeGraphBuilder
+
+        mock_client = MagicMock()
+        fenced = "```json\n" + self._mock_extract_response([
+            {"name": "BERT", "type": "CONCEPT", "description": "model"}
+        ]) + "\n```"
+        mock_client.messages.create.return_value.content = [MagicMock(text=fenced)]
+
+        builder = KnowledgeGraphBuilder(mock_client)
+        entities, _ = builder.extract_from_chunk(_chunk("text"))
+        self.assertEqual(len(entities), 1)
+        self.assertEqual(entities[0].name, "BERT")
+
+    def test_build_graph_merges_duplicate_entities(self):
+        from src.retrieval.graph_rag import KnowledgeGraphBuilder
+
+        mock_client = MagicMock()
+        # Two chunks both mention BERT — should be merged into one node
+        mock_client.messages.create.return_value.content = [MagicMock(
+            text=self._mock_extract_response([
+                {"name": "BERT", "type": "CONCEPT", "description": "desc1"},
+            ])
+        )]
+
+        builder = KnowledgeGraphBuilder(mock_client)
+        chunks = [
+            _chunk("chunk A", chunk_id="ca"),
+            _chunk("chunk B", chunk_id="cb"),
+        ]
+        G = builder.build_graph(chunks)
+
+        # BERT should appear exactly once even though it's in two chunks
+        self.assertIn("BERT", G.nodes)
+        entity = G.nodes["BERT"]["entity"]
+        self.assertIn("ca", entity.source_chunk_ids)
+        self.assertIn("cb", entity.source_chunk_ids)
+
+    # ------------------------------------------------------------------
+    # Community detection
+    # ------------------------------------------------------------------
+
+    def test_detect_communities_empty_graph(self):
+        import networkx as nx
+        from src.retrieval.graph_rag import detect_communities
+
+        G = nx.Graph()
+        communities = detect_communities(G)
+        self.assertEqual(communities, [])
+
+    def test_detect_communities_two_components(self):
+        import networkx as nx
+        from src.retrieval.graph_rag import detect_communities
+
+        G = nx.Graph()
+        G.add_edge("A", "B")
+        G.add_edge("C", "D")  # disconnected from A-B
+
+        communities = detect_communities(G)
+        # Should find at least 2 communities for two disconnected components
+        self.assertGreaterEqual(len(communities), 1)
+
+    def test_detect_communities_splits_large_communities(self):
+        import networkx as nx
+        from src.retrieval.graph_rag import detect_communities
+
+        G = nx.Graph()
+        # One star graph with 20 nodes — too large (> max_community_size=15)
+        for i in range(20):
+            G.add_edge("hub", f"node{i}")
+
+        communities = detect_communities(G, max_community_size=15)
+        # No single community should exceed max_community_size
+        for c in communities:
+            self.assertLessEqual(len(c.entity_names), 15)
+
+    # ------------------------------------------------------------------
+    # Query routing
+    # ------------------------------------------------------------------
+
+    def test_is_global_query_keyword_detection(self):
+        from src.retrieval.graph_rag import GraphRAG
+
+        rag, _, _, _ = self._make_graph_rag()
+
+        self.assertTrue(rag._is_global_query("What are the main themes?"))
+        self.assertTrue(rag._is_global_query("Give me an overall summary"))
+        self.assertFalse(rag._is_global_query("What did BERT do?"))
+        self.assertFalse(rag._is_global_query("Who created GPT-4?"))
+
+    def test_is_global_forced_mode(self):
+        from src.retrieval.graph_rag import GraphRAG
+        from src.generation.generator import Generator
+
+        store = self._make_store_with_chunks(["text"])
+        rag_global = GraphRAG(
+            store=store,
+            embedder=self._make_embedder(),
+            generator=MagicMock(spec=Generator),
+            query_mode="global",
+        )
+        rag_local = GraphRAG(
+            store=store,
+            embedder=self._make_embedder(),
+            generator=MagicMock(spec=Generator),
+            query_mode="local",
+        )
+
+        self.assertTrue(rag_global._is_global_query("specific entity question"))
+        self.assertFalse(rag_local._is_global_query("main themes summary overall"))
+
+    # ------------------------------------------------------------------
+    # build_graph integration (mocked LLM)
+    # ------------------------------------------------------------------
+
+    def test_build_graph_sets_built_flag(self):
+        from src.retrieval.graph_rag import GraphRAG
+
+        rag, _, _, _ = self._make_graph_rag()
+
+        with patch("anthropic.Anthropic") as mock_anthropic:
+            client = MagicMock()
+            mock_anthropic.return_value = client
+            rag._client = client
+
+            # Entity extraction returns one entity per chunk
+            client.messages.create.return_value.content = [MagicMock(
+                text=self._mock_extract_response([
+                    {"name": "BERT", "type": "CONCEPT", "description": "model"}
+                ])
+            )]
+
+            rag.build_graph()
+
+        self.assertTrue(rag._built)
+        self.assertIsNotNone(rag._graph)
+
+    def test_build_graph_empty_store(self):
+        from src.retrieval.graph_rag import GraphRAG
+        from src.generation.generator import Generator
+
+        empty_store = InMemoryVectorStore()
+        rag = GraphRAG(
+            store=empty_store,
+            embedder=self._make_embedder(),
+            generator=MagicMock(spec=Generator),
+        )
+        rag.build_graph()
+        # Should handle gracefully — _built stays False, graph is None
+        self.assertFalse(rag._built)
+
+    # ------------------------------------------------------------------
+    # Local / global query (pre-built graph, mocked)
+    # ------------------------------------------------------------------
+
+    def test_local_query_falls_back_when_no_entity_match(self):
+        """If query contains no known entity names, falls back to vector retrieval."""
+        from src.retrieval.graph_rag import GraphRAG
+        import networkx as nx
+
+        rag, store, embedder, generator = self._make_graph_rag()
+        # Manually set up a built graph with one entity
+        rag._graph = nx.Graph()
+        rag._graph.add_node("BERT")
+        rag._entity_map = {}
+        rag._built = True
+
+        generator.generate.return_value.metadata = {}
+        rag._local_query("What is the weather today?")
+
+        generator.generate.assert_called_once()
+
+    def test_global_query_falls_back_when_no_communities(self):
+        """If no communities built, global query falls back to vector retrieval."""
+        from src.retrieval.graph_rag import GraphRAG
+        import networkx as nx
+
+        rag, store, embedder, generator = self._make_graph_rag()
+        rag._graph = nx.Graph()
+        rag._communities = []
+        rag._entity_map = {}
+        rag._built = True
+
+        generator.generate.return_value.metadata = {}
+        rag._global_query("What are the main themes?")
+
+        generator.generate.assert_called_once()
+
+    def test_run_triggers_build_if_not_built(self):
+        """run() calls build_graph() automatically if not already built."""
+        from src.retrieval.graph_rag import GraphRAG
+
+        rag, _, _, generator = self._make_graph_rag()
+        generator.generate.return_value.metadata = {}
+
+        with patch.object(rag, "build_graph", wraps=lambda: setattr(rag, "_built", True) or rag) as mock_build:
+            rag._built = False
+            rag.run("What are the main themes?")
+            mock_build.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

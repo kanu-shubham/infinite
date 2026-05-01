@@ -50,6 +50,55 @@ from src.config import config
 from src.documents import RetrievalResult
 
 
+class CrossEncoderReranker:
+    """
+    Reranks retrieval results using a local cross-encoder model.
+
+    Cross-encoders see (query, passage) jointly — unlike bi-encoders
+    that embed them separately.  This joint attention lets the model
+    spot exact-match overlaps, negations, and scope mismatches that
+    bi-encoder cosine similarity misses.
+
+    Model: cross-encoder/ms-marco-MiniLM-L-6-v2  (~66 MB, CPU-friendly)
+    Requires: pip install sentence-transformers
+
+    Falls back to a score of 0 for any passage that errors during
+    inference so the rest of the results are still returned.
+    """
+
+    def __init__(
+        self,
+        model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        top_n: int = 20,
+    ):
+        try:
+            from sentence_transformers import CrossEncoder  # type: ignore
+            self._model = CrossEncoder(model_name)
+        except ImportError as exc:
+            raise ImportError(
+                "sentence-transformers is required for CrossEncoderReranker. "
+                "Install it with: pip install sentence-transformers"
+            ) from exc
+        self._top_n = top_n
+
+    def rerank(
+        self,
+        query: str,
+        results: List[RetrievalResult],
+        k: int = 5,
+    ) -> List[RetrievalResult]:
+        """Return the top-k results re-scored by the cross-encoder."""
+        if not results:
+            return []
+
+        candidates = results[: self._top_n]
+        pairs = [(query, r.chunk.content) for r in candidates]
+        scores = self._model.predict(pairs)  # returns np.ndarray of floats
+
+        scored = sorted(zip(scores, candidates), key=lambda x: x[0], reverse=True)
+        return [r for _, r in scored[:k]]
+
+
 _SCORE_SYSTEM = textwrap.dedent("""\
     You are a relevance judge for a search engine.
 
