@@ -1,0 +1,35 @@
+# Prefix tuning of Mistral-7B — trains only continuous KV-prefix vectors
+# prepended to every attention layer. Tiny parameter footprint (~0.05% of
+# the model) and great for cheap multi-task adapters.
+experiment: prefix-mistral-7b
+
+model:
+  name_or_path: mistralai/Mistral-7B-Instruct-v0.3
+  torch_dtype: bfloat16
+  gradient_checkpointing: true
+
+adapter:
+  type: prefix
+  num_virtual_tokens: 30
+  prefix_projection: false
+  task_type: CAUSAL_LM
+
+data:
+  train_file: data/train.jsonl
+  eval_file: data/eval.jsonl
+  prompt_field: instruction
+  response_field: output
+  template: chatml
+  max_seq_length: 1024
+
+training:
+  output_dir: ${OUTPUT_DIR:-outputs}
+  num_train_epochs: 5.0
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 5.0e-3        # prefix tuning likes higher LR
+  bf16: true
+  optim: adamw_torch
+  eval_strategy: epoch
+  save_strategy: epoch
+  report_to: [mlflow]

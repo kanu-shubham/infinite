@@ -1,0 +1,38 @@
+# Full fine-tuning of a small (1B-class) model. Use only when:
+#   * the base model is small enough that full FT fits the budget,
+#   * the dataset is large/diverse enough that catastrophic forgetting
+#     of pre-training capabilities is acceptable,
+#   * deployment of one specialized model per task is fine.
+experiment: full-ft-small
+
+model:
+  name_or_path: TinyLlama/TinyLlama-1.1B-Chat-v1.0
+  torch_dtype: bfloat16
+  gradient_checkpointing: true
+
+adapter:
+  type: full
+
+data:
+  train_file: data/train.jsonl
+  prompt_field: instruction
+  response_field: output
+  template: chatml
+  max_seq_length: 2048
+
+training:
+  output_dir: ${OUTPUT_DIR:-outputs}
+  num_train_epochs: 2.0
+  per_device_train_batch_size: 2
+  gradient_accumulation_steps: 16
+  learning_rate: 5.0e-6        # FULL FT needs MUCH lower LR than LoRA
+  warmup_ratio: 0.03
+  lr_scheduler_type: cosine
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+  optim: adamw_torch
+  bf16: true
+  eval_strategy: epoch
+  save_strategy: epoch
+  save_total_limit: 2
+  report_to: [mlflow]

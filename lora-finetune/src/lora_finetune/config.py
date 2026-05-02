@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any, Literal, Union
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -25,9 +25,19 @@ class ModelConfig(BaseModel):
     attn_implementation: Literal["eager", "sdpa", "flash_attention_2"] = "sdpa"
     use_cache: bool = False
     gradient_checkpointing: bool = True
+    # Hint for the loader when the model on disk is already post-training
+    # quantized (GPTQ/AWQ). bnb-4bit/8bit is set instead via the
+    # ``quantization`` block.
+    quant_format: Literal["none", "gptq", "awq"] = "none"
 
 
 class QuantizationConfig(BaseModel):
+    """bitsandbytes runtime quantization (QLoRA-style).
+
+    For *post-training* quantization (GPTQ, AWQ) see ``ModelConfig.quant_format``
+    and the ``scripts/quantize_gptq.py`` / ``scripts/export_gguf.sh`` exporters.
+    """
+
     model_config = ConfigDict(extra="forbid")
 
     enabled: bool = False
@@ -44,18 +54,76 @@ class QuantizationConfig(BaseModel):
         return self
 
 
-class LoRAConfig(BaseModel):
+# --------------------------------------------------------------------------- #
+# Adapter configurations — discriminated union over PEFT methods.             #
+# --------------------------------------------------------------------------- #
+
+
+class _AdapterBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    r: int = 16
-    alpha: int = 32
-    dropout: float = 0.05
+
+class LoRAAdapter(_AdapterBase):
+    """Low-Rank Adaptation. Adds B@A rank-r matrices to selected linear layers.
+
+    With ``use_dora`` enabled, becomes DoRA (decomposed magnitude + direction).
+    With ``use_rslora`` enabled, scales by ``alpha / sqrt(r)`` instead of
+    ``alpha / r`` for more stable training at high ranks.
+    """
+
+    type: Literal["lora"] = "lora"
+    r: int = Field(16, ge=1, le=512)
+    alpha: int = Field(32, ge=1)
+    dropout: float = Field(0.05, ge=0.0, le=0.9)
     bias: Literal["none", "all", "lora_only"] = "none"
     task_type: Literal["CAUSAL_LM", "SEQ_CLS", "SEQ_2_SEQ_LM"] = "CAUSAL_LM"
     target_modules: list[str] | Literal["all-linear"] = "all-linear"
     modules_to_save: list[str] | None = None
     use_rslora: bool = False
     use_dora: bool = False
+
+
+class PrefixTuningAdapter(_AdapterBase):
+    """Prepends trainable continuous "prefix" key/value vectors to attention."""
+
+    type: Literal["prefix"] = "prefix"
+    num_virtual_tokens: int = Field(30, ge=1, le=512)
+    prefix_projection: bool = False
+    encoder_hidden_size: int | None = None
+    task_type: Literal["CAUSAL_LM", "SEQ_2_SEQ_LM"] = "CAUSAL_LM"
+
+
+class PTuningAdapter(_AdapterBase):
+    """P-Tuning v2: trainable prompt encoder generates virtual tokens."""
+
+    type: Literal["ptuning"] = "ptuning"
+    num_virtual_tokens: int = Field(20, ge=1, le=512)
+    encoder_hidden_size: int = Field(128, ge=8)
+    encoder_reparameterization_type: Literal["MLP", "LSTM"] = "MLP"
+    task_type: Literal["CAUSAL_LM", "SEQ_2_SEQ_LM", "SEQ_CLS"] = "CAUSAL_LM"
+
+
+class IA3Adapter(_AdapterBase):
+    """(IA)^3: rescaling vectors injected into K, V, FFN. Tiny parameter cost."""
+
+    type: Literal["ia3"] = "ia3"
+    target_modules: list[str] | None = None
+    feedforward_modules: list[str] | None = None
+    task_type: Literal["CAUSAL_LM", "SEQ_CLS", "SEQ_2_SEQ_LM"] = "CAUSAL_LM"
+
+
+class FullFinetuneAdapter(_AdapterBase):
+    """No adapter — every parameter trains. Use for small models or tasks with
+    enough data and budget where catastrophic forgetting is acceptable.
+    """
+
+    type: Literal["full"] = "full"
+
+
+AdapterConfig = Annotated[
+    Union[LoRAAdapter, PrefixTuningAdapter, PTuningAdapter, IA3Adapter, FullFinetuneAdapter],
+    Field(discriminator="type"),
+]
 
 
 class DataConfig(BaseModel):
@@ -128,6 +196,16 @@ class EvaluationConfig(BaseModel):
     num_eval_samples: int | None = None
 
 
+class AdapterMount(BaseModel):
+    """Static configuration for one adapter mounted at serve time."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    path: str
+    default: bool = False
+
+
 class ServingConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -138,6 +216,7 @@ class ServingConfig(BaseModel):
     default_temperature: float = 0.7
     default_top_p: float = 0.9
     request_timeout_s: float = 60.0
+    adapters: list[AdapterMount] = Field(default_factory=list)
 
 
 class ExperimentConfig(BaseModel):
@@ -146,7 +225,7 @@ class ExperimentConfig(BaseModel):
     experiment: str
     model: ModelConfig
     quantization: QuantizationConfig = Field(default_factory=QuantizationConfig)
-    lora: LoRAConfig = Field(default_factory=LoRAConfig)
+    adapter: AdapterConfig = Field(default_factory=lambda: LoRAAdapter())
     data: DataConfig
     training: TrainingConfig = Field(default_factory=TrainingConfig)
     evaluation: EvaluationConfig = Field(default_factory=EvaluationConfig)
@@ -161,7 +240,13 @@ class ExperimentConfig(BaseModel):
 
     @property
     def is_qlora(self) -> bool:
-        return self.quantization.enabled
+        """True iff using LoRA *and* bitsandbytes runtime quantization."""
+        return self.quantization.enabled and self.adapter.type == "lora"
+
+    @property
+    def is_peft(self) -> bool:
+        """False only when ``adapter.type == 'full'``."""
+        return self.adapter.type != "full"
 
 
 _ENV_RE = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)(:-(.*?))?\}")

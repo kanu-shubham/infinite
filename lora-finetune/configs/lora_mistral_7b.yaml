@@ -10,11 +10,14 @@ model:
 quantization:
   enabled: false
 
-lora:
+adapter:
+  type: lora
   r: 32
   alpha: 64
   dropout: 0.05
   target_modules: all-linear
+  use_dora: false
+  use_rslora: false
 
 data:
   train_file: data/train.jsonl

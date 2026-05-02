@@ -59,10 +59,16 @@ def merge(
 @app.command()
 def serve(
     model: Path = typer.Option(..., "--model", "-m", exists=True),
-    adapter: Path | None = typer.Option(None, "--adapter"),
+    adapter: Path | None = typer.Option(None, "--adapter", help="Single adapter path."),
+    adapters: list[str] = typer.Option(
+        [],
+        "--adapters",
+        help="Multi-adapter mounts as 'name=path' (repeatable). Takes precedence over --adapter.",
+    ),
     host: str = typer.Option("0.0.0.0", "--host"),
     port: int = typer.Option(8000, "--port"),
     max_concurrency: int = typer.Option(8, "--max-concurrency"),
+    load_in_4bit: bool = typer.Option(False, "--load-in-4bit", help="bitsandbytes 4-bit at serve time."),
 ) -> None:
     """Start the FastAPI inference server."""
     import uvicorn
@@ -70,7 +76,13 @@ def serve(
     from lora_finetune.serving.api import create_app
 
     setup_logging()
-    application = create_app(str(model), str(adapter) if adapter else None, max_concurrency)
+    application = create_app(
+        model_path=str(model),
+        adapter_path=str(adapter) if adapter else None,
+        adapters=adapters or None,
+        max_concurrency=max_concurrency,
+        load_in_4bit=load_in_4bit,
+    )
     uvicorn.run(application, host=host, port=port, log_config=None)
 
 

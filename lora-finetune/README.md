@@ -1,22 +1,36 @@
 # lora-finetune
 
-Production-grade **LoRA** / **QLoRA** fine-tuning of large language models.
+Production-grade fine-tuning and serving of large language models with
+**LoRA, QLoRA, DoRA, Prefix-Tuning, P-Tuning v2, (IA)³** and full
+fine-tuning. Plus post-training quantization to **GPTQ / AWQ / GGUF** and
+**multi-adapter** inference serving.
 
 Built on PyTorch, Transformers, PEFT and bitsandbytes. Ships with an
 opinionated config system, a HuggingFace-Trainer pipeline, a FastAPI inference
 service, MLflow tracking, Dockerfiles, Kubernetes manifests and an Airflow DAG.
 
+> 📘 **New to fine-tuning?** Read [`docs/concepts.md`](docs/concepts.md)
+> first — it covers the math behind LoRA, rank/alpha selection,
+> target-module choice, the PEFT/full-FT trade-off, catastrophic forgetting,
+> and the quantization landscape (bnb / GPTQ / AWQ / GGUF / mixed precision).
+
 ## Features
 
-- **LoRA & QLoRA (4-bit NF4)** via `peft` + `bitsandbytes`.
-- **YAML configs** validated by Pydantic, with `${ENV:-default}` interpolation.
+- **PEFT methods**: LoRA, QLoRA, DoRA, RSLoRA, Prefix-Tuning, P-Tuning v2,
+  (IA)³, plus a **full fine-tuning** path — all selected via a single
+  `adapter.type` field.
+- **Quantization**: bitsandbytes 4-bit NF4 / 8-bit at training time;
+  post-training **GPTQ**, **AWQ** and **GGUF** export for fast inference.
+- **YAML configs** validated by Pydantic with `${ENV:-default}` interpolation
+  and discriminated-union adapter blocks.
 - **Training**: HF `Trainer` with gradient checkpointing, paged-AdamW,
   early-stopping, MLflow logging, multi-GPU via `accelerate`.
 - **Data**: HF Hub / JSONL / CSV / Parquet, chat/Alpaca/Llama-3/ChatML templates,
   response-only loss masking.
 - **Evaluation**: loss, perplexity, ROUGE, BLEU, exact-match.
-- **Serving**: FastAPI with bearer auth, Prometheus metrics, async concurrency
-  bounds, and health checks.
+- **Serving**: FastAPI with **multi-adapter hot-swap**, bearer auth, Prometheus
+  metrics, async concurrency bounds, health checks; transparent loading of
+  GPTQ/AWQ/bnb-4bit models.
 - **Ops**: CPU-only CI tests, two Dockerfiles, docker-compose with MLflow,
   Kubernetes Job + Deployment + HPA, Airflow DAG for weekly re-training.
 
@@ -64,21 +78,28 @@ curl -X POST http://localhost:8000/v1/generate \
 
 ```
 lora-finetune/
-├── configs/                 YAML experiments (QLoRA Llama-3, LoRA Mistral, tiny smoke)
+├── configs/                 YAML experiments
+│   ├── qlora_llama3_8b.yaml      QLoRA + LoRA on Llama-3-8B
+│   ├── lora_mistral_7b.yaml      Standard LoRA on Mistral-7B
+│   ├── prefix_mistral_7b.yaml    Prefix tuning
+│   ├── ia3_mistral_7b.yaml       (IA)^3
+│   ├── full_ft_small.yaml        Full fine-tuning of TinyLlama
+│   └── test_tiny.yaml            CI smoke
+├── docs/concepts.md         Math + heuristics + decision tables
 ├── src/lora_finetune/
-│   ├── config.py            Pydantic config + env interpolation
+│   ├── config.py            Pydantic config (adapter discriminated union)
 │   ├── data/                loaders, templates, tokenization, collator
 │   ├── models/              base-model loading, PEFT attach, adapter merge
 │   ├── training/trainer.py  HF Trainer wrapper
 │   ├── evaluation/          loss/perplexity + generation metrics
-│   ├── serving/             FastAPI app + schemas
+│   ├── serving/             FastAPI app + schemas (multi-adapter hot-swap)
 │   ├── logging_utils.py     structured JSON logging
 │   └── cli.py               typer entrypoint: train / eval / merge / serve
 ├── tests/                   unit tests + fixtures (no GPU required)
 ├── docker/                  Dockerfile.train & Dockerfile.serve
 ├── deploy/k8s/              Job, Deployment, Service, HPA
 ├── deploy/airflow/          weekly training DAG
-├── scripts/                 accelerate launcher + API smoke test
+├── scripts/                 accelerate launcher, GPTQ/AWQ/GGUF exporters
 ├── Makefile                 common workflows
 ├── docker-compose.yml       MLflow + train + serve
 └── pyproject.toml
@@ -89,15 +110,30 @@ lora-finetune/
 Every run takes a single YAML file mapped onto `ExperimentConfig`. Top-level
 sections:
 
-| Section        | Purpose                                                |
-| -------------- | ------------------------------------------------------ |
-| `model`        | base checkpoint, dtype, attention impl, ckpt flag       |
-| `quantization` | enable QLoRA (4-bit NF4 or 8-bit)                       |
-| `lora`         | rank, alpha, dropout, target modules, RSLoRA/DoRA flags |
-| `data`         | dataset source, template, max seq length, split         |
-| `training`     | HF `TrainingArguments` surface + early stopping         |
-| `evaluation`   | metrics to compute, generation length                   |
-| `serving`      | FastAPI host/port, concurrency cap                      |
+| Section        | Purpose                                                          |
+| -------------- | ---------------------------------------------------------------- |
+| `model`        | base checkpoint, dtype, attention impl, on-disk quant format     |
+| `quantization` | enable QLoRA-style runtime quantization (bnb 4-bit NF4 / 8-bit)  |
+| `adapter`      | discriminated union: `lora`, `prefix`, `ptuning`, `ia3`, `full`  |
+| `data`         | dataset source, template, max seq length, split                  |
+| `training`     | HF `TrainingArguments` surface + early stopping                  |
+| `evaluation`   | metrics to compute, generation length                            |
+| `serving`      | FastAPI host/port, concurrency cap, multi-adapter mounts         |
+
+### Adapter types
+
+```yaml
+adapter:
+  type: lora        # plus r, alpha, dropout, target_modules, use_dora, use_rslora
+adapter:
+  type: prefix      # plus num_virtual_tokens, prefix_projection
+adapter:
+  type: ptuning     # plus encoder_hidden_size, encoder_reparameterization_type
+adapter:
+  type: ia3         # plus target_modules, feedforward_modules
+adapter:
+  type: full        # full fine-tuning, no PEFT wrapper
+```
 
 See `configs/qlora_llama3_8b.yaml` for a complete QLoRA example and
 `configs/test_tiny.yaml` for the CI smoke config.
@@ -127,6 +163,49 @@ lora-finetune merge \
 ```
 
 The merged directory is a drop-in for HF Transformers, vLLM or TGI.
+
+## Post-training quantization
+
+Compress the merged model further for faster inference:
+
+```bash
+# GPTQ (CUDA, INT4) — calibration-based, near-fp16 quality
+python scripts/quantize_gptq.py --model outputs/merged --output outputs/merged-gptq-4bit --bits 4
+
+# AWQ (CUDA, INT4) — activation-aware, slightly better than GPTQ at 4-bit
+python scripts/quantize_awq.py --model outputs/merged --output outputs/merged-awq-4bit
+
+# GGUF (llama.cpp, CPU/Metal) — for edge / Mac / Ollama
+scripts/export_gguf.sh outputs/merged exports/llama3 q4_k_m
+```
+
+See [`docs/concepts.md`](docs/concepts.md) §7 for a full comparison.
+
+## Multi-adapter serving
+
+Host **one base model** and route requests to **N adapters** at runtime —
+ideal for SaaS multi-tenant deployments. Adapter switching is free
+(metadata-only) so per-tenant adapters live in the same pod.
+
+```bash
+lora-finetune serve \
+  --model outputs/merged \
+  --adapters support=outputs/support-adapter \
+  --adapters sales=outputs/sales-adapter \
+  --adapters legal=outputs/legal-adapter
+```
+
+Clients pick an adapter per request:
+```bash
+curl -X POST http://localhost:8000/v1/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [{"role":"user","content":"Hi"}],
+    "adapter": "support"
+  }'
+```
+
+`GET /v1/adapters` lists what's mounted; `GET /health` reports adapter names.
 
 ## Observability
 

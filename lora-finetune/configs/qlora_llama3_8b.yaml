@@ -14,7 +14,8 @@ quantization:
   bnb_4bit_compute_dtype: bfloat16
   bnb_4bit_use_double_quant: true
 
-lora:
+adapter:
+  type: lora
   r: 16
   alpha: 32
   dropout: 0.05

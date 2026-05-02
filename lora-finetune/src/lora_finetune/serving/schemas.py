@@ -13,6 +13,9 @@ class ChatMessage(BaseModel):
 
 class GenerateRequest(BaseModel):
     messages: list[ChatMessage] = Field(..., min_length=1)
+    adapter: str | None = Field(
+        None, description="Adapter name (multi-adapter serving). None = base / default."
+    )
     max_new_tokens: int = Field(256, ge=1, le=4096)
     temperature: float = Field(0.7, ge=0.0, le=2.0)
     top_p: float = Field(0.9, ge=0.0, le=1.0)
@@ -33,6 +36,7 @@ class GenerateResponse(BaseModel):
     finish_reason: Literal["stop", "length"]
     usage: GenerateUsage
     model: str
+    adapter: str | None = None
     latency_ms: float
 
 
@@ -40,3 +44,14 @@ class HealthResponse(BaseModel):
     status: Literal["ok", "degraded"]
     model: str
     device: str
+    adapters: list[str] = Field(default_factory=list)
+
+
+class AdapterInfo(BaseModel):
+    name: str
+    path: str
+    is_default: bool
+
+
+class AdaptersResponse(BaseModel):
+    adapters: list[AdapterInfo]

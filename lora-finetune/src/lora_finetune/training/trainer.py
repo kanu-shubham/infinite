@@ -17,7 +17,7 @@ from lora_finetune.config import ExperimentConfig
 from lora_finetune.data.collator import CausalCollator
 from lora_finetune.data.dataset import build_datasets
 from lora_finetune.logging_utils import get_logger
-from lora_finetune.models.peft_model import attach_lora, load_base_model, load_tokenizer
+from lora_finetune.models.peft_model import attach_adapter, load_base_model, load_tokenizer
 
 logger = get_logger(__name__)
 
@@ -70,7 +70,7 @@ def run_training(cfg: ExperimentConfig) -> dict[str, float]:
     tokenizer = load_tokenizer(cfg)
     train_ds, eval_ds = build_datasets(cfg.data, tokenizer)
     base_model = load_base_model(cfg)
-    model = attach_lora(base_model, cfg)
+    model = attach_adapter(base_model, cfg)
 
     args = _to_training_args(cfg)
     collator = CausalCollator(tokenizer=tokenizer)
@@ -93,9 +93,9 @@ def run_training(cfg: ExperimentConfig) -> dict[str, float]:
     train_result = trainer.train(resume_from_checkpoint=_find_resume(args.output_dir))
     metrics = dict(train_result.metrics)
 
-    adapter_dir = Path(args.output_dir) / "adapter"
-    trainer.model.save_pretrained(adapter_dir)
-    tokenizer.save_pretrained(adapter_dir)
+    save_dir = Path(args.output_dir) / ("adapter" if cfg.is_peft else "model")
+    trainer.model.save_pretrained(save_dir)
+    tokenizer.save_pretrained(save_dir)
 
     if eval_ds is not None:
         eval_metrics = trainer.evaluate()
@@ -104,7 +104,7 @@ def run_training(cfg: ExperimentConfig) -> dict[str, float]:
             metrics["eval_perplexity"] = math.exp(eval_metrics["eval_loss"])
 
     (Path(args.output_dir) / "metrics.json").write_text(json.dumps(metrics, indent=2))
-    logger.info("Training complete", extra={"adapter_dir": str(adapter_dir)})
+    logger.info("Training complete", extra={"save_dir": str(save_dir)})
     return metrics
 
 

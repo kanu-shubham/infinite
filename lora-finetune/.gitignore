@@ -21,5 +21,6 @@ mlruns/
 .ipynb_checkpoints/
 data/raw/
 data/processed/
-models/
+# Top-level only — do NOT match src/lora_finetune/models/ (the package).
+/models/
 .cache/
