@@ -5,8 +5,12 @@ from .raptor import RaptorRAG
 from .multi_hop import MultiHopRAG
 from .query_decomp import QueryDecompRAG
 from .graph_rag import GraphRAG
+from .step_back import StepBackRAG
+from .crag import CRAG
+from .agentic import AgenticRAG
 
 __all__ = [
     "NaiveRAG", "HyDERAG", "SelfRAG", "RaptorRAG",
     "MultiHopRAG", "QueryDecompRAG", "GraphRAG",
+    "StepBackRAG", "CRAG", "AgenticRAG",
 ]

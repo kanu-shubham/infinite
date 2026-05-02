@@ -9,9 +9,37 @@ NumPy:  O(n) exact scan — fine up to ~100k chunks
 FAISS:  approximate nearest neighbour — handles millions of chunks,
         10x-100x faster at scale, GPU support available
 
-Index type used: IndexFlatIP (exact inner product search on normalised
-vectors = exact cosine similarity). For >1M vectors swap to IndexIVFFlat
-or IndexHNSWFlat for sub-linear query time.
+Index types
+-----------
+Three index types are supported, selected by the `index_type` param:
+
+  "flat"  (IndexFlatIP) — DEFAULT
+    Exact brute-force cosine search.
+    No training required, perfect recall.
+    O(n) per query — fine for < 1M vectors.
+    Use when: index fits in memory, recall is critical.
+
+  "hnsw"  (IndexHNSWFlat) — RECOMMENDED for production
+    Hierarchical Navigable Small World graph.
+    Approximate nearest neighbour, no training required.
+    O(log n) per query, tunable recall/speed trade-off via M
+    (number of edges per node, default 32) and efSearch (beam width).
+    Typical recall@10: 95-99%.
+    Use when: low latency matters and you have > 100k vectors.
+    Memory: ~(4 * dim + M * 8) bytes per vector.
+
+  "ivf"  (IndexIVFFlat) — BEST for very large corpora
+    Inverted File Index: clusters vectors into nlist Voronoi cells.
+    At query time, searches only nprobe cells (default 8).
+    REQUIRES training on a representative sample first.
+    O(n/nlist * nprobe) per query — can be 100x faster than flat.
+    Use when: corpus > 1M vectors and you can afford a training pass.
+
+    Trade-off: nprobe ↑ = recall ↑ = latency ↑
+
+    HNSW vs IVF:
+    - HNSW: better recall at same speed, no training, uses more memory
+    - IVF:  less memory, needs training, requires nprobe tuning
 
 Persistence
 -----------
@@ -91,14 +119,70 @@ class FAISSVectorStore:
     ----------
     dim         : embedding dimension (must match your embedder)
     index_path  : directory to save/load index files (None = in-memory only)
+    index_type  : "flat" | "hnsw" | "ivf"  (see module docstring for trade-offs)
+    hnsw_m      : HNSW connections per node (higher = better recall, more memory)
+    ivf_nlist   : IVF number of Voronoi cells (sqrt(n) is a good default)
+    ivf_nprobe  : IVF cells to search at query time (higher = better recall)
     """
 
-    def __init__(self, dim: int = 128, index_path: Optional[str] = None):
+    def __init__(
+        self,
+        dim: int = 128,
+        index_path: Optional[str] = None,
+        index_type: str = "flat",
+        hnsw_m: int = 32,
+        ivf_nlist: int = 100,
+        ivf_nprobe: int = 8,
+    ):
         self._dim = dim
         self._index_path = index_path
+        self._index_type = index_type
+        self._hnsw_m = hnsw_m
+        self._ivf_nlist = ivf_nlist
+        self._ivf_nprobe = ivf_nprobe
         self._chunks: List[Chunk] = []
-        # IndexFlatIP: exact inner product (= cosine for normalised vectors)
-        self._index: faiss.IndexFlatIP = faiss.IndexFlatIP(dim)
+        self._ivf_trained = False
+        self._index = self._build_index()
+
+    # ------------------------------------------------------------------
+    # Index construction
+    # ------------------------------------------------------------------
+
+    def _build_index(self):
+        """Create the appropriate FAISS index based on index_type."""
+        if self._index_type == "hnsw":
+            # IndexHNSWFlat: graph-based ANN, no training needed
+            index = faiss.IndexHNSWFlat(self._dim, self._hnsw_m,
+                                        faiss.METRIC_INNER_PRODUCT)
+            # efSearch controls query-time recall vs speed (default 16, raise for better recall)
+            index.hnsw.efSearch = 64
+            return index
+
+        elif self._index_type == "ivf":
+            # IndexIVFFlat: cluster-based ANN, requires training
+            # Wrap in IndexFlatIP quantizer for the coarse quantiser step
+            quantizer = faiss.IndexFlatIP(self._dim)
+            index = faiss.IndexIVFFlat(
+                quantizer, self._dim, self._ivf_nlist,
+                faiss.METRIC_INNER_PRODUCT,
+            )
+            index.nprobe = self._ivf_nprobe
+            return index
+
+        else:  # "flat" (default)
+            return faiss.IndexFlatIP(self._dim)
+
+    def _ensure_ivf_trained(self, matrix: np.ndarray) -> None:
+        """Train the IVF index if not yet trained. Called lazily on first add."""
+        if self._index_type != "ivf" or self._ivf_trained:
+            return
+        if matrix.shape[0] < self._ivf_nlist:
+            # Not enough vectors to train — fall back to flat for now
+            self._index = faiss.IndexFlatIP(self._dim)
+            self._index_type = "flat"
+            return
+        self._index.train(matrix)
+        self._ivf_trained = True
 
     # ------------------------------------------------------------------
     # Indexing
@@ -121,6 +205,7 @@ class FAISSVectorStore:
             self._chunks.append(chunk)
 
         matrix = np.stack(vecs, axis=0)
+        self._ensure_ivf_trained(matrix)
         self._index.add(matrix)
 
     def remove_chunks(self, chunk_ids: List[str]) -> None:
@@ -137,19 +222,21 @@ class FAISSVectorStore:
             return  # nothing to remove
 
         self._chunks = []
-        self._index = faiss.IndexFlatIP(self._dim)
+        self._ivf_trained = False
+        self._index = self._build_index()
         if keep:
             chunks, embeddings = zip(*keep)
             self._chunks = list(chunks)
             matrix = np.stack([e.astype(np.float32) for e in embeddings])
-            # Re-normalise
             norms = np.linalg.norm(matrix, axis=1, keepdims=True)
             matrix = matrix / np.where(norms > 0, norms, 1)
+            self._ensure_ivf_trained(matrix)
             self._index.add(matrix)
 
     def clear(self) -> None:
         self._chunks = []
-        self._index = faiss.IndexFlatIP(self._dim)
+        self._ivf_trained = False
+        self._index = self._build_index()
 
     # ------------------------------------------------------------------
     # Search

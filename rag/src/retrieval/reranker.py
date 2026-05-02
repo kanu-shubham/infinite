@@ -37,12 +37,47 @@ Two reranker options
 
 For production: use a cross-encoder model for speed, LLM reranker
 as a fallback or for high-value queries.
+
+Three reranker options
+----------------------
+1. CrossEncoderReranker  — local sentence-transformers model
+   Fast, free, ~66 MB, CPU-friendly.
+   Best default for self-hosted deployments.
+
+2. LLMReranker           — Claude as a relevance judge
+   No extra dependencies, better for domain-specific queries.
+   Slower and costs API tokens.
+
+3. CohereReranker        — Cohere Rerank API
+   State-of-the-art quality, simple API call.
+   Requires cohere API key (pip install cohere).
+   Best choice when quality > cost and you already use Cohere.
+
+ColBERT  (note — not implemented here)
+-------
+ColBERT (Contextualised Late Interaction over BERT) is a different
+architecture from cross-encoders:
+
+  Cross-encoder: concat [query, doc] → single score  (slow but accurate)
+  Bi-encoder:   embed query + doc independently      (fast but less accurate)
+  ColBERT:      embed query + doc independently at TOKEN level,
+                then compute MaxSim: for each query token, find its max
+                similarity across all doc tokens, sum across query.
+                score = Σ_i max_j sim(q_i, d_j)
+
+This late interaction captures fine-grained token overlap (finding that
+"transformer" in the query matches "transformer" in the passage, not just
+that the embedding centroids are close).
+
+ColBERT achieves near cross-encoder accuracy at near bi-encoder speed
+because the doc token embeddings can be pre-computed and stored.
+Used in: RAGatouille (wrappers for ColBERT), vespa.ai, custom PLAID index.
 """
 
 from __future__ import annotations
 
 import textwrap
-from typing import List
+from typing import List, Optional
 
 import anthropic
 
@@ -179,3 +214,71 @@ class LLMReranker:
             return int(text[0])
         except (ValueError, IndexError):
             return 1  # neutral fallback
+
+
+class CohereReranker:
+    """
+    Reranks results using the Cohere Rerank API.
+
+    Cohere's rerank models are trained specifically for relevance ranking
+    and consistently score top on BEIR benchmarks alongside cross-encoders.
+
+    Requires: pip install cohere
+    Set env var COHERE_API_KEY or pass api_key directly.
+
+    Models
+    ------
+    rerank-english-v3.0     — English only, best quality
+    rerank-multilingual-v3.0 — 100+ languages
+    rerank-english-light-v3.0 — faster, lower cost
+
+    Parameters
+    ----------
+    model   : Cohere rerank model name
+    top_n   : number of candidates to send to Cohere (cost is per document)
+    """
+
+    def __init__(
+        self,
+        model: str = "rerank-english-v3.0",
+        top_n: int = 20,
+        api_key: Optional[str] = None,
+    ):
+        try:
+            import cohere  # type: ignore
+        except ImportError as exc:
+            raise ImportError(
+                "cohere package required: pip install cohere"
+            ) from exc
+
+        import os
+        key = api_key or os.environ.get("COHERE_API_KEY", "")
+        self._client = cohere.Client(key)
+        self._model = model
+        self._top_n = top_n
+
+    def rerank(
+        self,
+        query: str,
+        results: List[RetrievalResult],
+        k: int = 5,
+    ) -> List[RetrievalResult]:
+        """Call Cohere Rerank and return top-k results."""
+        if not results:
+            return []
+
+        candidates = results[: self._top_n]
+        documents = [r.chunk.content[:512] for r in candidates]
+
+        response = self._client.rerank(
+            model=self._model,
+            query=query,
+            documents=documents,
+            top_n=k,
+        )
+
+        reranked = []
+        for hit in response.results:
+            r = candidates[hit.index]
+            reranked.append(RetrievalResult(chunk=r.chunk, score=hit.relevance_score))
+        return reranked

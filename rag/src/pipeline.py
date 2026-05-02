@@ -70,6 +70,9 @@ from src.retrieval.raptor import RaptorRAG
 from src.retrieval.multi_hop import MultiHopRAG
 from src.retrieval.query_decomp import QueryDecompRAG
 from src.retrieval.graph_rag import GraphRAG
+from src.retrieval.step_back import StepBackRAG
+from src.retrieval.crag import CRAG
+from src.retrieval.agentic import AgenticRAG
 from src.retrieval.reranker import LLMReranker
 from src.vectorstore.memory import InMemoryVectorStore
 from src.vectorstore.faiss_store import FAISSVectorStore, MetadataFilter
@@ -83,6 +86,9 @@ PATTERNS = {
     "multi_hop":    MultiHopRAG,
     "query_decomp": QueryDecompRAG,
     "graph_rag":    GraphRAG,
+    "step_back":    StepBackRAG,
+    "crag":         CRAG,
+    "agentic":      AgenticRAG,
 }
 
 
