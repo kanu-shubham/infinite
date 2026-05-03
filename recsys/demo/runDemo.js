@@ -8,6 +8,7 @@ const { generateCatalog, Catalog } = require("../data/catalog");
 const { Recommender } = require("../service/recommender");
 const { InMemoryProfileStore } = require("../service/profileStore");
 const { InMemoryEventLog } = require("../service/eventLog");
+const { LearnedModel } = require("../model/learnedModel");
 const { topTags } = require("../model/userProfile");
 
 function printSlate(label, slate) {
@@ -31,8 +32,13 @@ async function main() {
   const catalog = new Catalog(generateCatalog(240));
   const profileStore = new InMemoryProfileStore();
   const eventLog = new InMemoryEventLog();
-  const rec = new Recommender({ catalog, profileStore, eventLog });
+  const learnedModel = LearnedModel.loadFromDisk();
+  console.log(learnedModel
+    ? `[demo] using learned model (auc=${learnedModel.meta?.metrics?.auc?.toFixed(3)} recall@10=${learnedModel.meta?.metrics?.recallAt10?.toFixed(3)})`
+    : "[demo] no artifacts — using heuristic model. Run `node recsys/training/runTrain.js` first.");
+  const rec = new Recommender({ catalog, profileStore, eventLog, learnedModel });
 
+  // Brand-new online user — no MF embedding, ranker uses neutral mfScore.
   const userId = "u_demo";
 
   // 1. Cold start — no history, expect trending/fresh-heavy slate.
@@ -72,6 +78,20 @@ async function main() {
   console.log(`\nSource distribution in top-30: ${JSON.stringify(counts)}`);
 
   console.log(`\nEvents logged: ${eventLog.size()}`);
+
+  // ── Known-user demo: pick a user from the trained pool so the full
+  //    learned path (per-user MF score) is exercised.
+  if (learnedModel) {
+    const knownUserId = Object.keys(learnedModel.mf.userEmb)[0];
+    if (knownUserId) {
+      const knownSlate = rec.recommend(knownUserId, { page: 1, pageSize: 6 });
+      printSlate(`Known trained user (${knownUserId})`, knownSlate);
+      const counts = knownSlate.items.reduce(
+        (acc, x) => ((acc[x.source] = (acc[x.source] || 0) + 1), acc), {},
+      );
+      console.log(`  source distribution: ${JSON.stringify(counts)}`);
+    }
+  }
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

@@ -12,6 +12,7 @@
 // confidence) for use by the ranker.
 
 const { cosine, expDecay } = require("./similarity");
+const { learnedCollabCandidates, learnedUserCandidates } = require("./learnedCandidates");
 
 function contentCandidates(profile, catalog, n = 100) {
   const sumAffinity = profile.tagAffinity.reduce((a, b) => a + b, 0);
@@ -72,9 +73,13 @@ function freshCandidates(catalog, n = 30) {
 }
 
 // Union the sources, deduping by video id and keeping the best per-source
-// score. Returns an array of { video, score, source }.
+// score. When `learnedModel` is provided, learned MF retrieval (item-item
+// NN in embedding space + per-user score where available) replaces the
+// heuristic content/collab generators. Trending + fresh remain as safety
+// nets / exploration.
 function generateCandidates(profile, catalog, opts = {}) {
   const {
+    learnedModel = null,
     contentN = 100,
     collabN = 100,
     trendingN = 40,
@@ -89,8 +94,13 @@ function generateCandidates(profile, catalog, opts = {}) {
     }
   };
 
-  merge(contentCandidates(profile, catalog, contentN));
-  merge(collaborativeCandidates(profile, catalog, collabN));
+  if (learnedModel) {
+    merge(learnedCollabCandidates(profile, catalog, learnedModel, collabN));
+    merge(learnedUserCandidates(profile, catalog, learnedModel, contentN));
+  } else {
+    merge(contentCandidates(profile, catalog, contentN));
+    merge(collaborativeCandidates(profile, catalog, collabN));
+  }
   merge(trendingCandidates(catalog, trendingN));
   merge(freshCandidates(catalog, freshN));
 

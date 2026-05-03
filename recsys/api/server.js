@@ -12,6 +12,7 @@ const { generateCatalog, Catalog } = require("../data/catalog");
 const { Recommender } = require("../service/recommender");
 const { InMemoryProfileStore } = require("../service/profileStore");
 const { InMemoryEventLog } = require("../service/eventLog");
+const { LearnedModel } = require("../model/learnedModel");
 const { buildRoutes, notFound } = require("./routes");
 
 function readJsonBody(req, max = 1 << 20) {
@@ -45,11 +46,19 @@ function send(res, { status, body }) {
   res.end(JSON.stringify(body));
 }
 
-function buildServer({ catalogSize = 240, weights } = {}) {
+function buildServer({ catalogSize = 240, weights, useLearned = true } = {}) {
   const catalog = new Catalog(generateCatalog(catalogSize));
   const profileStore = new InMemoryProfileStore();
   const eventLog = new InMemoryEventLog();
-  const recommender = new Recommender({ catalog, profileStore, eventLog, weights });
+  const learnedModel = useLearned ? LearnedModel.loadFromDisk() : null;
+  if (useLearned) {
+    if (learnedModel) {
+      console.log(`[server] loaded learned model (auc=${learnedModel.meta?.metrics?.auc?.toFixed(3)} recall@10=${learnedModel.meta?.metrics?.recallAt10?.toFixed(3)})`);
+    } else {
+      console.log("[server] no artifacts found in recsys/artifacts/ — falling back to heuristic model. Run `node recsys/training/runTrain.js` to train.");
+    }
+  }
+  const recommender = new Recommender({ catalog, profileStore, eventLog, weights, learnedModel });
   const routes = buildRoutes(recommender);
 
   const server = http.createServer(async (req, res) => {

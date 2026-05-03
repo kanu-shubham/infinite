@@ -12,15 +12,17 @@
 
 const { generateCandidates } = require("../model/candidateGenerators");
 const { rank, explain, DEFAULT_WEIGHTS } = require("../model/ranker");
+const { rankWithLearned, explainLearned } = require("../model/learnedRanker");
 const { diversify, applyHardFilters } = require("../model/reranker");
 const { applyEvent, isColdStart } = require("../model/userProfile");
 
 class Recommender {
-  constructor({ catalog, profileStore, eventLog, weights = DEFAULT_WEIGHTS }) {
+  constructor({ catalog, profileStore, eventLog, weights = DEFAULT_WEIGHTS, learnedModel = null }) {
     this.catalog = catalog;
     this.profileStore = profileStore;
     this.eventLog = eventLog;
     this.weights = weights;
+    this.learnedModel = learnedModel;
 
     // Wire event-log -> profile updates so writes from any path keep state
     // consistent. The profile store is updated synchronously so the next
@@ -49,8 +51,11 @@ class Recommender {
   recommend(userId, { page = 1, pageSize = 8, blocklist = [] } = {}) {
     const profile = this.profileStore.get(userId);
 
-    // 1. Candidate generation.
-    const rawCandidates = generateCandidates(profile, this.catalog);
+    // 1. Candidate generation. Learned MF retrieval replaces the heuristic
+    //    content/collab generators when an artifact is loaded.
+    const rawCandidates = generateCandidates(profile, this.catalog, {
+      learnedModel: this.learnedModel,
+    });
 
     // 2. Hard filters.
     const excludeIds = new Set([
@@ -62,8 +67,11 @@ class Recommender {
       blocklist: new Set(blocklist),
     });
 
-    // 3. Rank.
-    const ranked = rank(filtered, profile, this.weights);
+    // 3. Rank. Learned logistic regression model takes over when present.
+    const ranked = this.learnedModel
+      ? rankWithLearned(filtered, profile, this.catalog, this.learnedModel)
+      : rank(filtered, profile, this.weights);
+    const explainFn = this.learnedModel ? explainLearned : explain;
 
     // 4. Re-rank for diversity. Build the slate large enough for the
     //    requested page.
@@ -82,7 +90,7 @@ class Recommender {
       source: s.source,
       finalScore: s.finalScore,
       rankerScore: s.rankerScore,
-      reasons: explain(s).map((e) => e.feature),
+      reasons: explainFn(s).map((e) => e.feature),
     }));
 
     return {
@@ -93,6 +101,7 @@ class Recommender {
       debug: {
         userId,
         coldStart: isColdStart(profile),
+        modelKind: this.learnedModel ? "learned" : "heuristic",
         candidatePoolSize: rawCandidates.length,
         afterFilter: filtered.length,
         slateSize: slate.length,

@@ -1,0 +1,1 @@
+{"weights":{"mfScore":3.2403757136483486,"tagOverlap":0.04336718685263728,"channelHistory":2.2048271702402236,"popularity":0.5086984047762309,"recency":-0.4416899644788014},"bias":-2.128143139285913,"mfNorm":{"mu":0.7468164957505975,"sigma":1.0158940395894447},"finalLoss":0.25354831249002513,"features":["mfScore","tagOverlap","channelHistory","popularity","recency"]}
