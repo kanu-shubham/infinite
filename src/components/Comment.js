@@ -1,13 +1,15 @@
-import React from "react";
+import React, { memo } from "react";
 import "./Comment.css";
 
-export default function Comment({ mesureRef, comment }) {
+const Comment = memo(function Comment({ measureRef, comment }) {
   return (
-    <li className="comment-item" ref={mesureRef}>
+    <li className="comment-item" ref={measureRef}>
       <span>
         [{comment.id}] {comment.email}
       </span>
       <p>{comment.body}</p>
     </li>
   );
-}
+});
+
+export default Comment;

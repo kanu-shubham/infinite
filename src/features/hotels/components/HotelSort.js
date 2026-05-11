@@ -1,8 +1,8 @@
-import React, { useCallback } from "react";
+import React, { memo, useCallback } from "react";
 import { SORT_OPTIONS } from "../constants";
 import "./HotelSort.css";
 
-export default function HotelSort({ value, onChange, totalCount }) {
+const HotelSort = memo(function HotelSort({ value, onChange, totalCount }) {
   const handleChange = useCallback(
     (e) => onChange(e.target.value),
     [onChange]
@@ -33,4 +33,6 @@ export default function HotelSort({ value, onChange, totalCount }) {
       </div>
     </div>
   );
-}
+});
+
+export default HotelSort;

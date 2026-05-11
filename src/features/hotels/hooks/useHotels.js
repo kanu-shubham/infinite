@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useCallback, useRef } from "react";
+import { useReducer, useEffect, useCallback, useRef, useState } from "react";
 import { fetchHotels } from "../services/hotelService";
 
 const initialState = {
@@ -44,13 +44,16 @@ function reducer(state, action) {
 export default function useHotels({ filters, sortBy }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const requestIdRef = useRef(0);
+  // Bumped by retry() to force the fetch effect to re-run without
+  // duplicating fetch logic in a separate callback.
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Reset and refetch from page 1 whenever filters or sort changes
+  // Reset and refetch from page 1 whenever filters or sort changes.
   useEffect(() => {
     dispatch({ type: "RESET" });
   }, [filters, sortBy]);
 
-  // Fetch current page
+  // Fetch current page. Runs on page change, filter/sort change, or retry.
   useEffect(() => {
     const rid = ++requestIdRef.current;
 
@@ -71,7 +74,7 @@ export default function useHotels({ filters, sortBy }) {
         if (rid !== requestIdRef.current) return;
         dispatch({ type: "ERROR", message: err.message });
       });
-  }, [state.page, filters, sortBy]); // eslint-disable-line
+  }, [state.page, filters, sortBy, retryCount]); // eslint-disable-line
 
   const loadMore = useCallback(() => {
     if (!state.isLoading && state.hasMore) {
@@ -79,25 +82,7 @@ export default function useHotels({ filters, sortBy }) {
     }
   }, [state.isLoading, state.hasMore]);
 
-  const retry = useCallback(() => {
-    dispatch({ type: "LOADING" });
-    const rid = ++requestIdRef.current;
-    fetchHotels({ filters, sortBy, page: state.page })
-      .then((result) => {
-        if (rid !== requestIdRef.current) return;
-        dispatch({
-          type: "SUCCESS",
-          data: result.data,
-          hasMore: result.hasMore,
-          total: result.total,
-          page: state.page,
-        });
-      })
-      .catch((err) => {
-        if (rid !== requestIdRef.current) return;
-        dispatch({ type: "ERROR", message: err.message });
-      });
-  }, [filters, sortBy, state.page]);
+  const retry = useCallback(() => setRetryCount((c) => c + 1), []);
 
   return {
     hotels: state.hotels,

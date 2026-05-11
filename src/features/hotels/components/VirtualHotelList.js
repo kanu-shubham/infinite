@@ -7,6 +7,16 @@ import "./VirtualHotelList.css";
 
 const ITEM_HEIGHT = 170; // px — height of each compact row including gap
 
+// Extracted to module scope — recreating these on every scroll tick caused
+// style recalculations even though the values never changed.
+const SPACER_STYLE = { position: "relative" };
+const ITEM_WRAPPER_STYLE = {
+  position: "absolute",
+  width: "100%",
+  height: ITEM_HEIGHT,
+  padding: "0 0 12px",
+};
+
 // ---------------------------------------------------------------------------
 // Compact card shared by both strategies
 // memo: virtualItems array is recreated on every scroll tick, so without
@@ -46,8 +56,10 @@ const CompactHotelCard = memo(function CompactHotelCard({ hotel }) {
 // ---------------------------------------------------------------------------
 // Strategy A — container-based (DEFAULT)
 // Scroll happens inside a fixed-height div; window is not involved.
+// memo: prevents re-render when the parent switches strategy toggle or when
+// unrelated state (e.g. the other tab's data) changes in HotelListingPage.
 // ---------------------------------------------------------------------------
-function ContainerVirtualList({ hotels }) {
+const ContainerVirtualList = memo(function ContainerVirtualList({ hotels }) {
   const { containerRef, virtualItems, totalHeight, startIndex, endIndex } =
     useVirtualList({ itemCount: hotels.length, itemHeight: ITEM_HEIGHT });
 
@@ -57,17 +69,11 @@ function ContainerVirtualList({ hotels }) {
         Rendering {virtualItems.length} of {hotels.length} items
       </span>
       <div ref={containerRef} className="virtual-list__container">
-        <div style={{ height: totalHeight, position: "relative" }}>
+        <div style={{ height: totalHeight, ...SPACER_STYLE }}>
           {virtualItems.map(({ index, offsetTop }) => (
             <div
               key={hotels[index].id}
-              style={{
-                position: "absolute",
-                top: offsetTop,
-                width: "100%",
-                height: ITEM_HEIGHT,
-                padding: "0 0 12px",
-              }}
+              style={{ ...ITEM_WRAPPER_STYLE, top: offsetTop }}
             >
               <CompactHotelCard hotel={hotels[index]} />
             </div>
@@ -79,13 +85,14 @@ function ContainerVirtualList({ hotels }) {
       </p>
     </div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Strategy B — window-based
 // Scroll is tracked on window; list is positioned in normal document flow.
+// memo: same reasoning as ContainerVirtualList.
 // ---------------------------------------------------------------------------
-function WindowVirtualList({ hotels }) {
+const WindowVirtualList = memo(function WindowVirtualList({ hotels }) {
   const { listRef, virtualItems, totalHeight, startIndex, endIndex } =
     useWindowVirtualizer({ itemCount: hotels.length, itemHeight: ITEM_HEIGHT });
 
@@ -94,17 +101,11 @@ function WindowVirtualList({ hotels }) {
       <span className="virtual-list__badge">
         Rendering {virtualItems.length} of {hotels.length} items
       </span>
-      <div ref={listRef} style={{ position: "relative", height: totalHeight }}>
+      <div ref={listRef} style={{ height: totalHeight, ...SPACER_STYLE }}>
         {virtualItems.map(({ index, offsetTop }) => (
           <div
             key={hotels[index].id}
-            style={{
-              position: "absolute",
-              top: offsetTop,
-              width: "100%",
-              height: ITEM_HEIGHT,
-              padding: "0 0 12px",
-            }}
+            style={{ ...ITEM_WRAPPER_STYLE, top: offsetTop }}
           >
             <CompactHotelCard hotel={hotels[index]} />
           </div>
@@ -115,7 +116,7 @@ function WindowVirtualList({ hotels }) {
       </p>
     </div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Public component — selects strategy via prop

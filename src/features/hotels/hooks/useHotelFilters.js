@@ -31,8 +31,10 @@ export default function useHotelFilters() {
     setSortBy("");
   }, []);
 
-  const hasActiveFilters =
-    rawFilters.search || rawFilters.priceRange || rawFilters.minRating;
+  const hasActiveFilters = useMemo(
+    () => Boolean(rawFilters.search || rawFilters.priceRange || rawFilters.minRating),
+    [rawFilters.search, rawFilters.priceRange, rawFilters.minRating]
+  );
 
   return {
     rawFilters,   // bind to controlled inputs

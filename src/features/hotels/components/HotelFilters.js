@@ -1,8 +1,8 @@
-import React, { useCallback } from "react";
+import React, { memo, useCallback } from "react";
 import { PRICE_RANGES, RATING_OPTIONS } from "../constants";
 import "./HotelFilters.css";
 
-export default function HotelFilters({ filters, onFilterChange, onReset, hasActiveFilters }) {
+const HotelFilters = memo(function HotelFilters({ filters, onFilterChange, onReset, hasActiveFilters }) {
   const handleSearchChange = useCallback(
     (e) => onFilterChange("search", e.target.value),
     [onFilterChange]
@@ -77,4 +77,6 @@ export default function HotelFilters({ filters, onFilterChange, onReset, hasActi
       )}
     </div>
   );
-}
+});
+
+export default HotelFilters;

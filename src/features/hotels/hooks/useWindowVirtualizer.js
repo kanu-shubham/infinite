@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 
 /**
  * Window-based virtualizer (alternative strategy).
@@ -74,10 +74,13 @@ export default function useWindowVirtualizer({
     Math.ceil((scrollRelative + viewportHeight) / itemHeight) - 1 + overscan
   );
 
-  const virtualItems = [];
-  for (let i = startIndex; i <= endIndex; i++) {
-    virtualItems.push({ index: i, offsetTop: i * itemHeight });
-  }
+  const virtualItems = useMemo(() => {
+    const items = [];
+    for (let i = startIndex; i <= endIndex; i++) {
+      items.push({ index: i, offsetTop: i * itemHeight });
+    }
+    return items;
+  }, [startIndex, endIndex, itemHeight]);
 
   return { listRef, virtualItems, totalHeight, startIndex, endIndex };
 }

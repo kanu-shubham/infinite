@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import useHotelFilters from "./hooks/useHotelFilters";
 import useHotels from "./hooks/useHotels";
 import useAllHotels from "./hooks/useAllHotels";
@@ -23,6 +23,9 @@ const STRATEGIES = [
 export default function HotelListingPage() {
   const [activeTab, setActiveTab]         = useState("virtual");
   const [strategy, setStrategy]           = useState("container");
+
+  const handleTabChange      = useCallback((id) => setActiveTab(id), []);
+  const handleStrategyChange = useCallback((id) => setStrategy(id), []);
 
   // ── Shared filter + sort state (debounced search inside) ──────────────
   const {
@@ -83,7 +86,7 @@ export default function HotelListingPage() {
             <button
               key={tab.id}
               className={`tab-bar__btn${activeTab === tab.id ? " tab-bar__btn--active" : ""}`}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
             >
               {tab.label}
             </button>
@@ -112,7 +115,7 @@ export default function HotelListingPage() {
                 <button
                   key={s.id}
                   className={`strategy-toggle__btn${strategy === s.id ? " strategy-toggle__btn--active" : ""}`}
-                  onClick={() => setStrategy(s.id)}
+                  onClick={() => handleStrategyChange(s.id)}
                 >
                   {s.label}
                 </button>

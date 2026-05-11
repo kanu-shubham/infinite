@@ -9,29 +9,24 @@ export default function CommentList({
   loadMore,
   comments
 }) {
-  const { measureRef, isIntersecting, observer } = useOnScreen();
+  const { measureRef, isIntersecting, disconnect } = useOnScreen();
 
   useEffect(() => {
     if (isIntersecting && hasMore) {
       loadMore();
-      observer.disconnect();
+      disconnect();
     }
-  }, [isIntersecting, hasMore, loadMore]);
+  }, [isIntersecting, hasMore, loadMore, disconnect]);
 
   return (
     <ul className="comment-list">
-      {comments.map((comment, index) => {
-        if (index === comments.length - 1) {
-          return (
-            <Comment
-              mesureRef={measureRef}
-              key={comment.id}
-              comment={comment}
-            />
-          );
-        }
-        return <Comment key={comment.id} comment={comment} />;
-      })}
+      {comments.map((comment, index) => (
+        <Comment
+          key={comment.id}
+          measureRef={index === comments.length - 1 ? measureRef : undefined}
+          comment={comment}
+        />
+      ))}
       {isLoading && <li>Loading...</li>}
     </ul>
   );

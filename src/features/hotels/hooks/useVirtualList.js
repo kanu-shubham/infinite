@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 /**
  * Container-based virtualizer (default strategy).
@@ -62,10 +62,13 @@ export default function useVirtualList({
     Math.ceil((scrollTop + containerHeight) / itemHeight) - 1 + overscan
   );
 
-  const virtualItems = [];
-  for (let i = startIndex; i <= endIndex; i++) {
-    virtualItems.push({ index: i, offsetTop: i * itemHeight });
-  }
+  const virtualItems = useMemo(() => {
+    const items = [];
+    for (let i = startIndex; i <= endIndex; i++) {
+      items.push({ index: i, offsetTop: i * itemHeight });
+    }
+    return items;
+  }, [startIndex, endIndex, itemHeight]);
 
   return { containerRef, virtualItems, totalHeight, startIndex, endIndex };
 }
