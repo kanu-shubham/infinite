@@ -1,0 +1,6 @@
+__pycache__
+*.pyc
+*.pyo
+models/artifacts/
+.pytest_cache
+.mypy_cache

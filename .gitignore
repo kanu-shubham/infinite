@@ -1,2 +1,8 @@
 node_modules
 build
+__pycache__/
+*.pyc
+*.pyo
+ml/models/artifacts/
+.pytest_cache/
+.mypy_cache/
