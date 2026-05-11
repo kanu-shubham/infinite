@@ -1,0 +1,38 @@
+.thank-you-popup {
+  background: #4c6ef5;
+  border-radius: 12px;
+  padding: 40px 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-width: 260px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  animation: thank-you-enter 0.25s ease;
+}
+
+@keyframes thank-you-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.thank-you-popup__checkmark {
+  font-size: 36px;
+  color: #ffffff;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.thank-you-popup__message {
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 500;
+  margin: 0;
+  text-align: center;
+}

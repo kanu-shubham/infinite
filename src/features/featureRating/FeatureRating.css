@@ -1,0 +1,20 @@
+.feature-rating__trigger {
+  background: #6c63ff;
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 20px;
+  transition: background-color 0.15s ease;
+}
+
+.feature-rating__trigger:hover {
+  background: #5a52e0;
+}
+
+.feature-rating__trigger:focus-visible {
+  outline: 2px solid #6c63ff;
+  outline-offset: 2px;
+}

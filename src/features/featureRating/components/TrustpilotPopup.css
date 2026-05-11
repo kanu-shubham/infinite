@@ -1,0 +1,75 @@
+.trustpilot-popup {
+  background: #1e1e2e;
+  border-radius: 12px;
+  padding: 28px 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 260px;
+  max-width: 320px;
+  position: relative;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.trustpilot-popup__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.trustpilot-popup__close:hover {
+  color: #ffffff;
+}
+
+.trustpilot-popup__close:focus-visible {
+  outline: 2px solid #6c63ff;
+  outline-offset: 2px;
+}
+
+.trustpilot-popup__title {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  text-align: center;
+}
+
+.trustpilot-popup__body {
+  color: #aaaacc;
+  font-size: 13px;
+  margin: 0;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.trustpilot-popup__cta {
+  background: #00b67a;
+  border-radius: 8px;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 20px;
+  margin-top: 4px;
+  transition: background-color 0.15s ease;
+  display: inline-block;
+}
+
+.trustpilot-popup__cta:hover {
+  background: #009d6a;
+}
+
+.trustpilot-popup__cta:focus-visible {
+  outline: 2px solid #00b67a;
+  outline-offset: 2px;
+}

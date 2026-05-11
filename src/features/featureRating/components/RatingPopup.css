@@ -1,0 +1,45 @@
+.rating-popup {
+  background: #1e1e2e;
+  border-radius: 12px;
+  padding: 20px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-width: 260px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.rating-popup__question {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0;
+  text-align: center;
+}
+
+.rating-popup__options {
+  display: flex;
+  gap: 16px;
+}
+
+.rating-popup__option {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+  line-height: 1;
+}
+
+.rating-popup__option:hover {
+  transform: scale(1.2);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.rating-popup__option:focus-visible {
+  outline: 2px solid #6c63ff;
+  outline-offset: 2px;
+}
