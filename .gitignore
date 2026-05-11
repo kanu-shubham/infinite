@@ -1,4 +1,5 @@
 node_modules
-buildml-serving/__pycache__/
+build
+ml-serving/__pycache__/
 ml-serving/app/__pycache__/
 ml-serving/model.pkl
