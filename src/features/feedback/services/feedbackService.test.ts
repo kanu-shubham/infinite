@@ -1,4 +1,9 @@
-import { submitFeedback, sanitizeComment, FeedbackValidationError } from './feedbackService';
+import {
+  FeedbackValidationError,
+  sanitizeComment,
+  submitFeedback,
+} from './feedbackService';
+import { RATING } from '../state/feedbackMachine';
 
 describe('sanitizeComment', () => {
   test('trims whitespace', () => {
@@ -18,7 +23,10 @@ describe('sanitizeComment', () => {
 
 describe('submitFeedback', () => {
   test('throws when rating missing', async () => {
-    await expect(submitFeedback({})).rejects.toBeInstanceOf(FeedbackValidationError);
+    // Force a missing rating through the type system for the runtime guard.
+    await expect(
+      submitFeedback({} as unknown as { rating: typeof RATING[keyof typeof RATING] }),
+    ).rejects.toBeInstanceOf(FeedbackValidationError);
   });
 
   test('POSTs JSON to endpoint and returns response body', async () => {
@@ -27,8 +35,8 @@ describe('submitFeedback', () => {
       json: () => Promise.resolve({ id: 'abc' }),
     });
     const out = await submitFeedback(
-      { rating: 'NEGATIVE', comment: '  bad  ' },
-      { fetchImpl, endpoint: '/x' },
+      { rating: RATING.NEGATIVE, comment: '  bad  ' },
+      { fetchImpl: fetchImpl as unknown as typeof fetch, endpoint: '/x' },
     );
     expect(fetchImpl).toHaveBeenCalledWith('/x', expect.objectContaining({
       method: 'POST',
@@ -40,6 +48,8 @@ describe('submitFeedback', () => {
 
   test('throws on non-OK response', async () => {
     const fetchImpl = jest.fn().mockResolvedValue({ ok: false, status: 500, json: () => ({}) });
-    await expect(submitFeedback({ rating: 'POSITIVE' }, { fetchImpl })).rejects.toThrow(/500/);
+    await expect(
+      submitFeedback({ rating: RATING.POSITIVE }, { fetchImpl: fetchImpl as unknown as typeof fetch }),
+    ).rejects.toThrow(/500/);
   });
 });

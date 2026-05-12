@@ -1,15 +1,17 @@
-import React, { useEffect, useRef } from 'react';
+import React, { ReactNode, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 import './Modal.css';
 
-let portalRoot = null;
-function getPortalRoot() {
+let portalRoot: HTMLDivElement | null = null;
+function getPortalRoot(): HTMLDivElement | null {
   if (typeof document === 'undefined') return null;
   if (portalRoot && document.body.contains(portalRoot)) return portalRoot;
-  portalRoot = document.getElementById('feedback-portal');
-  if (!portalRoot) {
+  const existing = document.getElementById('feedback-portal') as HTMLDivElement | null;
+  if (existing) {
+    portalRoot = existing;
+  } else {
     portalRoot = document.createElement('div');
     portalRoot.setAttribute('id', 'feedback-portal');
     document.body.appendChild(portalRoot);
@@ -17,15 +19,23 @@ function getPortalRoot() {
   return portalRoot;
 }
 
+export type ModalVariant = 'default' | 'dark' | 'blue' | 'review';
+
+export interface ModalProps {
+  open: boolean;
+  onClose?: () => void;
+  labelledBy?: string;
+  describedBy?: string;
+  variant?: ModalVariant;
+  dismissable?: boolean;
+  showClose?: boolean;
+  role?: 'dialog' | 'alertdialog' | 'status';
+  children: ReactNode;
+}
+
 /**
- * Accessible modal primitive. Owns:
- *   - portal mount (so stacking-context / overflow:hidden parents don't clip),
- *   - focus trap + restoration,
- *   - ESC + optional backdrop dismiss,
- *   - aria-modal + labelling.
- *
- * Variants are styled by the `variant` class; this primitive doesn't know
- * about feedback semantics.
+ * Accessible modal primitive: portal mount, focus trap, ESC + backdrop
+ * dismiss, aria-modal + labelling, body-scroll lock. Variants are pure CSS.
  */
 export function Modal({
   open,
@@ -37,13 +47,13 @@ export function Modal({
   showClose = true,
   role = 'dialog',
   children,
-}) {
-  const ref = useRef(null);
+}: ModalProps): JSX.Element | null {
+  const ref = useRef<HTMLDivElement>(null);
   useFocusTrap(ref, open);
-  useEscapeKey(() => dismissable && onClose?.(), open);
+  useEscapeKey(() => {
+    if (dismissable) onClose?.();
+  }, open);
 
-  // Lock scroll while open. Multiple modals overlap rarely; if they do,
-  // we still restore correctly because we capture the prior value.
   useEffect(() => {
     if (!open || typeof document === 'undefined') return undefined;
     const prev = document.body.style.overflow;
@@ -57,13 +67,13 @@ export function Modal({
   const root = getPortalRoot();
   if (!root) return null;
 
-  const onBackdropClick = (e) => {
+  const onBackdropMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!dismissable) return;
     if (e.target === e.currentTarget) onClose?.();
   };
 
   return ReactDOM.createPortal(
-    <div className="fb-backdrop" onMouseDown={onBackdropClick} data-testid="fb-backdrop">
+    <div className="fb-backdrop" onMouseDown={onBackdropMouseDown} data-testid="fb-backdrop">
       <div
         ref={ref}
         role={role}

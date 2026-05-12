@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { RefObject, useEffect } from 'react';
 
 const FOCUSABLE = [
   'a[href]',
@@ -11,23 +11,21 @@ const FOCUSABLE = [
 
 /**
  * Traps Tab focus inside the ref'd element and restores focus on unmount.
- * Designed to be a primitive — the Modal composes it, no other component
- * should need to know how the trap works.
  */
-export function useFocusTrap(containerRef, enabled = true) {
+export function useFocusTrap(containerRef: RefObject<HTMLElement>, enabled = true): void {
   useEffect(() => {
     if (!enabled || !containerRef.current) return undefined;
     const container = containerRef.current;
-    const previouslyFocused = document.activeElement;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
 
-    const focusables = () => Array.from(container.querySelectorAll(FOCUSABLE));
+    const focusables = (): HTMLElement[] =>
+      Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE));
 
-    // Initial focus: prefer first focusable, fallback to the container itself.
     const first = focusables()[0];
     if (first) first.focus();
     else container.focus();
 
-    const onKeyDown = (e) => {
+    const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Tab') return;
       const els = focusables();
       if (els.length === 0) {

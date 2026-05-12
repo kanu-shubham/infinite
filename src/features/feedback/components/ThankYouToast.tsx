@@ -2,7 +2,14 @@ import React from 'react';
 import { useAutoDismiss } from '../hooks/useAutoDismiss';
 import './ThankYouToast.css';
 
-export function ThankYouToast({ active, onDone, delay = 2000, titleId }) {
+export interface ThankYouToastProps {
+  active: boolean;
+  onDone: () => void;
+  delay?: number;
+  titleId: string;
+}
+
+export function ThankYouToast({ active, onDone, delay = 2000, titleId }: ThankYouToastProps): JSX.Element {
   useAutoDismiss(onDone, { active, delay });
 
   return (

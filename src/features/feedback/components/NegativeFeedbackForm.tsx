@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
+import React, { FormEvent, useState } from 'react';
 import { useStableId } from '../hooks/useStableId';
 import './NegativeFeedbackForm.css';
 
 const MAX_LENGTH = 2000;
 
-export function NegativeFeedbackForm({ onSubmit, submitting, error, titleId }) {
+export interface NegativeFeedbackFormProps {
+  onSubmit: (comment: string) => void;
+  submitting?: boolean;
+  error?: string | null;
+  titleId: string;
+}
+
+export function NegativeFeedbackForm({
+  onSubmit,
+  submitting = false,
+  error = null,
+  titleId,
+}: NegativeFeedbackFormProps): JSX.Element {
   const [value, setValue] = useState('');
   const errorId = useStableId('fb-err');
   const trimmed = value.trim();
   const disabled = submitting || trimmed.length === 0;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (disabled) return;
     onSubmit(trimmed);
@@ -29,7 +41,7 @@ export function NegativeFeedbackForm({ onSubmit, submitting, error, titleId }) {
         onChange={(e) => setValue(e.target.value.slice(0, MAX_LENGTH))}
         maxLength={MAX_LENGTH}
         rows={4}
-        aria-invalid={Boolean(error) || undefined}
+        aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
         autoFocus
         data-testid="fb-negative-text"

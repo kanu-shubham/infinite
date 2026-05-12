@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 
-export function useEscapeKey(handler, enabled = true) {
+export function useEscapeKey(handler: (e: KeyboardEvent) => void, enabled = true): void {
   useEffect(() => {
     if (!enabled) return undefined;
-    const onKeyDown = (e) => {
+    const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
         handler(e);

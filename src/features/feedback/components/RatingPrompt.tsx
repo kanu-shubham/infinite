@@ -1,14 +1,25 @@
 import React from 'react';
-import { RATING } from '../state/feedbackMachine';
+import { RATING, Rating } from '../state/feedbackMachine';
 import './RatingPrompt.css';
 
-const OPTIONS = [
+interface Option {
+  rating: Rating;
+  emoji: string;
+  label: string;
+}
+
+const OPTIONS: ReadonlyArray<Option> = [
   { rating: RATING.NEGATIVE, emoji: '👎', label: 'Negative' },
   { rating: RATING.POSITIVE, emoji: '👍', label: 'Positive' },
   { rating: RATING.STELLAR,  emoji: '😍', label: 'Stellar'  },
 ];
 
-export function RatingPrompt({ onRate, titleId }) {
+export interface RatingPromptProps {
+  onRate: (rating: Rating) => void;
+  titleId: string;
+}
+
+export function RatingPrompt({ onRate, titleId }: RatingPromptProps): JSX.Element {
   return (
     <div className="fb-rating">
       <h2 id={titleId} className="fb-rating__title">How would you rate this feature?</h2>

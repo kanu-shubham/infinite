@@ -1,10 +1,15 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
-import { FeedbackWidget } from './FeedbackWidget';
+import { render, screen, fireEvent, act, RenderResult } from '@testing-library/react';
+import { FeedbackWidget, FeedbackWidgetProps } from './FeedbackWidget';
 
-function setup(props = {}) {
+interface SetupResult extends RenderResult {
+  onClose: jest.Mock;
+  submitFeedback: jest.Mock;
+}
+
+function setup(props: Partial<FeedbackWidgetProps> = {}): SetupResult {
   const onClose = jest.fn();
-  const submitFeedback = props.submitFeedback ?? jest.fn().mockResolvedValue({});
+  const submitFeedback = (props.submitFeedback as jest.Mock | undefined) ?? jest.fn().mockResolvedValue({});
   const utils = render(
     <FeedbackWidget open onClose={onClose} submitFeedback={submitFeedback} {...props} />,
   );
@@ -91,7 +96,7 @@ describe('<FeedbackWidget />', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  test('ESC dismisses while on RATING but not on THANK_YOU', () => {
+  test('ESC dismisses while on RATING', () => {
     const { onClose } = setup();
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);

@@ -1,84 +1,85 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { useStableId } from './hooks/useStableId';
-import { Modal } from './components/Modal';
+import { Modal, ModalVariant } from './components/Modal';
 import { RatingPrompt } from './components/RatingPrompt';
 import { NegativeFeedbackForm } from './components/NegativeFeedbackForm';
 import { ThankYouToast } from './components/ThankYouToast';
 import { TrustpilotPrompt } from './components/TrustpilotPrompt';
 import {
-  ACTION,
+  FeedbackState,
   RATING,
   STATUS,
   initialState,
   reducer,
 } from './state/feedbackMachine';
-import { submitFeedback as defaultSubmit } from './services/feedbackService';
+import {
+  FeedbackPayload,
+  submitFeedback as defaultSubmit,
+} from './services/feedbackService';
 
-/**
- * Top-level orchestrator. Composes the state machine, the modal primitive,
- * and the per-step UI. This file deliberately contains no styling or
- * rendering decisions beyond which step to render — every visual concern
- * lives inside the step component.
- *
- * Props:
- *   open               — controlled "is widget visible" flag.
- *   onClose            — invoked when the widget transitions to CLOSED.
- *   submitFeedback     — DI seam for the network call (test override).
- *   trustpilotUrl      — link target for the STELLAR review CTA.
- *   thankYouDelayMs    — auto-dismiss delay for the thank-you toast.
- */
+export interface FeedbackWidgetProps {
+  /** Controlled visibility flag. */
+  open: boolean;
+  /** Fires exactly once per non-CLOSED → CLOSED transition. */
+  onClose?: () => void;
+  /** DI seam for the network call (override in tests). */
+  submitFeedback?: (payload: FeedbackPayload) => Promise<unknown>;
+  /** Link target for the STELLAR review CTA. */
+  trustpilotUrl?: string;
+  /** Auto-dismiss delay for the thank-you toast. */
+  thankYouDelayMs?: number;
+}
+
+const initFromOpen = (open: boolean): FeedbackState => ({
+  ...initialState,
+  status: open ? STATUS.RATING : STATUS.CLOSED,
+});
+
 export function FeedbackWidget({
   open,
   onClose,
   submitFeedback = defaultSubmit,
   trustpilotUrl,
   thankYouDelayMs = 2000,
-}) {
-  const [state, dispatch] = useReducer(reducer, initialState, (s) => ({
-    ...s,
-    status: open ? STATUS.RATING : STATUS.CLOSED,
-  }));
+}: FeedbackWidgetProps): JSX.Element | null {
+  const [state, dispatch] = useReducer(reducer, open, initFromOpen);
 
-  // Edge-trigger on `open` prop transitions only. Reacting to every render
-  // where `open===true && status===CLOSED` would cause an internal CLOSE
-  // (e.g. fired from the auto-dismiss timer) to bounce straight back to
-  // RATING before the parent has a chance to flip `open` to false.
+  // Edge-trigger on `open` prop transitions only.
   const prevOpenRef = useRef(open);
   useEffect(() => {
     const prev = prevOpenRef.current;
     prevOpenRef.current = open;
-    if (open && !prev) dispatch({ type: ACTION.OPEN });
-    else if (!open && prev) dispatch({ type: ACTION.CLOSE });
+    if (open && !prev) dispatch({ type: 'OPEN' });
+    else if (!open && prev) dispatch({ type: 'CLOSE' });
   }, [open]);
 
   const close = useCallback(() => {
-    dispatch({ type: ACTION.CLOSE });
+    dispatch({ type: 'CLOSE' });
   }, []);
 
-  const handleRate = useCallback((rating) => {
-    dispatch({ type: ACTION.RATE, rating });
+  const handleRate = useCallback((rating: typeof RATING[keyof typeof RATING]) => {
+    dispatch({ type: 'RATE', rating });
   }, []);
 
   const handleSubmit = useCallback(
-    async (comment) => {
-      dispatch({ type: ACTION.SUBMIT_START });
+    async (comment: string) => {
+      dispatch({ type: 'SUBMIT_START' });
       try {
         await submitFeedback({ rating: RATING.NEGATIVE, comment });
-        dispatch({ type: ACTION.SUBMIT_SUCCESS, comment });
+        dispatch({ type: 'SUBMIT_SUCCESS', comment });
       } catch (err) {
-        dispatch({ type: ACTION.SUBMIT_ERROR, error: err?.message || 'Submission failed' });
+        const message = err instanceof Error ? err.message : 'Submission failed';
+        dispatch({ type: 'SUBMIT_ERROR', error: message });
       }
     },
     [submitFeedback],
   );
 
   const handleThankYouDone = useCallback(() => {
-    dispatch({ type: ACTION.THANK_YOU_DONE });
+    dispatch({ type: 'THANK_YOU_DONE' });
   }, []);
 
-  // Notify parent exactly once per "non-CLOSED → CLOSED" transition. The
-  // wasOpenRef guards against firing on first mount and against firing
-  // repeatedly while the parent hasn't yet flipped `open` to false.
+  // Notify parent exactly once per non-CLOSED → CLOSED transition.
   const wasOpenRef = useRef(state.status !== STATUS.CLOSED);
   useEffect(() => {
     if (state.status !== STATUS.CLOSED) {
@@ -107,23 +108,38 @@ export function FeedbackWidget({
           />
         );
       case STATUS.THANK_YOU:
-        return <ThankYouToast active onDone={handleThankYouDone} delay={thankYouDelayMs} titleId={titleId} />;
+        return (
+          <ThankYouToast
+            active
+            onDone={handleThankYouDone}
+            delay={thankYouDelayMs}
+            titleId={titleId}
+          />
+        );
       case STATUS.TRUSTPILOT:
         return <TrustpilotPrompt trustpilotUrl={trustpilotUrl} onClose={close} titleId={titleId} />;
       default:
         return null;
     }
-  }, [step, state.error, titleId, handleRate, handleSubmit, handleThankYouDone, thankYouDelayMs, trustpilotUrl, close]);
+  }, [
+    step,
+    state.error,
+    titleId,
+    handleRate,
+    handleSubmit,
+    handleThankYouDone,
+    thankYouDelayMs,
+    trustpilotUrl,
+    close,
+  ]);
 
   if (step === STATUS.CLOSED) return null;
 
-  const variant =
+  const variant: ModalVariant =
     step === STATUS.THANK_YOU ? 'blue'
       : step === STATUS.TRUSTPILOT ? 'review'
       : 'dark';
 
-  // The thank-you toast is informational and shouldn't be dismissable by ESC
-  // or backdrop, because doing so would skip the STELLAR → trustpilot step.
   const dismissable = step !== STATUS.THANK_YOU && step !== STATUS.SUBMITTING;
 
   return (

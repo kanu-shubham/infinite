@@ -3,9 +3,17 @@ import './TrustpilotPrompt.css';
 
 const DEFAULT_URL = 'https://www.trustpilot.com/review/bunq.com';
 
-export function TrustpilotPrompt({ trustpilotUrl = DEFAULT_URL, onClose, titleId }) {
-  // We could open programmatically, but a real anchor preserves middle-click,
-  // ctrl-click, and right-click semantics that users expect.
+export interface TrustpilotPromptProps {
+  trustpilotUrl?: string;
+  onClose?: () => void;
+  titleId: string;
+}
+
+export function TrustpilotPrompt({
+  trustpilotUrl = DEFAULT_URL,
+  onClose,
+  titleId,
+}: TrustpilotPromptProps): JSX.Element {
   return (
     <div className="fb-trustpilot">
       <h2 id={titleId} className="fb-trustpilot__title">Enjoying bunq?</h2>
@@ -18,10 +26,7 @@ export function TrustpilotPrompt({ trustpilotUrl = DEFAULT_URL, onClose, titleId
         href={trustpilotUrl}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={() => {
-          // Close after the user opts in; the new tab is already open.
-          onClose?.();
-        }}
+        onClick={() => onClose?.()}
         data-testid="fb-trustpilot-cta"
       >
         Go to Trustpilot

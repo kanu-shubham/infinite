@@ -1,29 +1,35 @@
-/**
- * Network boundary for feedback submission.
- *
- * Exposed as a function (not a class) so callers can dependency-inject a
- * mock during tests without monkey-patching modules. In production the
- * widget calls submitFeedback; in tests we pass a fake submit prop.
- */
+import type { Rating } from '../state/feedbackMachine';
 
 const MAX_COMMENT_LENGTH = 2000;
 
 export class FeedbackValidationError extends Error {
-  constructor(message) {
+  constructor(message: string) {
     super(message);
     this.name = 'FeedbackValidationError';
   }
 }
 
-export function sanitizeComment(raw) {
+export interface FeedbackPayload {
+  rating: Rating;
+  comment?: string;
+}
+
+export interface SubmitOptions {
+  fetchImpl?: typeof fetch;
+  endpoint?: string;
+}
+
+export function sanitizeComment(raw: unknown): string {
   if (typeof raw !== 'string') return '';
-  // Trim and clamp. React already escapes when rendering, so XSS via DOM
-  // injection is not a concern here — but server-side, anything goes, so
-  // we still bound the payload to avoid abuse.
+  // React escapes when rendering, so DOM XSS isn't a worry here. We still
+  // bound the payload server-side to avoid abuse.
   return raw.trim().slice(0, MAX_COMMENT_LENGTH);
 }
 
-export async function submitFeedback({ rating, comment }, { fetchImpl = fetch, endpoint = '/api/feedback' } = {}) {
+export async function submitFeedback(
+  { rating, comment }: FeedbackPayload,
+  { fetchImpl = fetch, endpoint = '/api/feedback' }: SubmitOptions = {},
+): Promise<unknown> {
   if (!rating) throw new FeedbackValidationError('rating is required');
 
   const body = JSON.stringify({ rating, comment: sanitizeComment(comment) });
