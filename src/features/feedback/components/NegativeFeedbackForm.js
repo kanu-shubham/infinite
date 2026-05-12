@@ -1,0 +1,52 @@
+import React, { useState } from 'react';
+import { useStableId } from '../hooks/useStableId';
+import './NegativeFeedbackForm.css';
+
+const MAX_LENGTH = 2000;
+
+export function NegativeFeedbackForm({ onSubmit, submitting, error, titleId }) {
+  const [value, setValue] = useState('');
+  const errorId = useStableId('fb-err');
+  const trimmed = value.trim();
+  const disabled = submitting || trimmed.length === 0;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (disabled) return;
+    onSubmit(trimmed);
+  };
+
+  return (
+    <form className="fb-negative" onSubmit={handleSubmit} noValidate>
+      <h2 id={titleId} className="fb-negative__title">How can we make things better?</h2>
+      <label className="fb-visually-hidden" htmlFor={`${titleId}-text`}>
+        Your feedback
+      </label>
+      <textarea
+        id={`${titleId}-text`}
+        className="fb-negative__textarea"
+        value={value}
+        onChange={(e) => setValue(e.target.value.slice(0, MAX_LENGTH))}
+        maxLength={MAX_LENGTH}
+        rows={4}
+        aria-invalid={Boolean(error) || undefined}
+        aria-describedby={error ? errorId : undefined}
+        autoFocus
+        data-testid="fb-negative-text"
+      />
+      {error && (
+        <p id={errorId} role="alert" className="fb-negative__error">{error}</p>
+      )}
+      <div className="fb-negative__footer">
+        <button
+          type="submit"
+          className="fb-negative__submit"
+          disabled={disabled}
+          data-testid="fb-negative-submit"
+        >
+          {submitting ? 'Submitting…' : 'Submit'}
+        </button>
+      </div>
+    </form>
+  );
+}

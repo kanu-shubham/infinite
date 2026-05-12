@@ -9,3 +9,25 @@
 *, *::before, *::after {
   box-sizing: border-box;
 }
+
+.app__feedback-fab {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #1f1f1f;
+  color: #fff;
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  z-index: 50;
+}
+
+.app__feedback-fab:hover { background: #2c2c2c; }
+.app__feedback-fab:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
