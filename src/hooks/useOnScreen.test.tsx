@@ -6,7 +6,9 @@ import { MockIntersectionObserver } from '../setupTests';
 function Probe({ onState }: { onState: (s: { isIntersecting: boolean }) => void }) {
   const { measureRef, isIntersecting } = useOnScreen();
   onState({ isIntersecting });
-  return <div data-testid="el" ref={(el) => measureRef(el)} />;
+  // measureRef is a stable useCallback — pass it directly so React only
+  // invokes it on actual node attach/detach, not on every render.
+  return <div data-testid="el" ref={measureRef as unknown as React.LegacyRef<HTMLDivElement>} />;
 }
 
 describe('useOnScreen', () => {

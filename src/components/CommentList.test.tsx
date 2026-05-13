@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import CommentList from './CommentList';
 import { MockIntersectionObserver } from '../setupTests';
 
@@ -19,14 +19,16 @@ describe('<CommentList />', () => {
   test('calls loadMore once the sentinel intersects (when hasMore=true)', () => {
     const loadMore = jest.fn();
     render(<CommentList hasMore comments={comments} isLoading={false} loadMore={loadMore} />);
-    MockIntersectionObserver.triggerAll(true);
+    // The chain is: IO callback → setIntersecting → re-render → useEffect → loadMore.
+    // Wrap in act so React flushes the state update and the effect before we assert.
+    act(() => { MockIntersectionObserver.triggerAll(true); });
     expect(loadMore).toHaveBeenCalled();
   });
 
   test('does not call loadMore when hasMore=false', () => {
     const loadMore = jest.fn();
     render(<CommentList hasMore={false} comments={comments} isLoading={false} loadMore={loadMore} />);
-    MockIntersectionObserver.triggerAll(true);
+    act(() => { MockIntersectionObserver.triggerAll(true); });
     expect(loadMore).not.toHaveBeenCalled();
   });
 });
