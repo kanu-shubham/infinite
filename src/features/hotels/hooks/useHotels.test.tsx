@@ -3,22 +3,22 @@ import { act, render } from '@testing-library/react';
 import useHotels from './useHotels';
 import { HOTELS } from '../constants';
 import { mockHotels } from '../data/mockHotels';
+import type { HotelFilters, SortKey } from '../types';
 
 beforeEach(() => jest.useFakeTimers());
 afterEach(() => jest.useRealTimers());
 
 type Captured = ReturnType<typeof useHotels>;
 
-function Probe({
-  onState,
-  filters = {},
-  sortBy = '',
-}: {
-  onState: (s: Captured) => void;
-  filters?: Parameters<typeof useHotels>[0]['filters'];
-  sortBy?: Parameters<typeof useHotels>[0]['sortBy'];
-}): null {
-  const state = useHotels({ filters, sortBy });
+// IMPORTANT: filters / sortBy are stored in module-scope refs so the
+// values passed to useHotels are stable across re-renders. Without this
+// stability the effect that watches [filters, sortBy] would re-fire every
+// render → dispatch RESET → state change → render → loop.
+const STABLE_FILTERS: Partial<HotelFilters> = {};
+const STABLE_SORT: SortKey | '' = '';
+
+function Probe({ onState }: { onState: (s: Captured) => void }): null {
+  const state = useHotels({ filters: STABLE_FILTERS, sortBy: STABLE_SORT });
   onState(state);
   return null;
 }

@@ -36,13 +36,15 @@ describe('<HotelListingPage /> integration', () => {
     expect(virtualTab).toHaveAttribute('aria-selected', 'false');
   });
 
-  test('switching to Standard renders a tabpanel and result count update', async () => {
+  test('switching to Standard renders a tabpanel and a result count', async () => {
     render(<HotelListingPage />);
     await flushFetches();
     fireEvent.click(screen.getByRole('tab', { name: /standard/i }));
     await flushFetches();
     expect(screen.getAllByRole('tabpanel').length).toBeGreaterThan(0);
-    expect(screen.getByText(/hotels found/i)).toBeInTheDocument();
+    // Both the sr-only live region and the visible count match; both
+    // appearing is the desired behaviour — assert at least one is rendered.
+    expect(screen.getAllByText(/hotels found/i).length).toBeGreaterThanOrEqual(1);
   });
 
   test('strategy toggle exposes aria-pressed', async () => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import useOnScreen from './useOnScreen';
 import { MockIntersectionObserver } from '../setupTests';
 
@@ -16,7 +16,7 @@ describe('useOnScreen', () => {
     const states: boolean[] = [];
     render(<Probe onState={(s) => states.push(s.isIntersecting)} />);
     expect(states[0]).toBe(false);
-    MockIntersectionObserver.triggerAll(true);
+    act(() => { MockIntersectionObserver.triggerAll(true); });
     expect(states[states.length - 1]).toBe(true);
   });
 });

@@ -58,22 +58,34 @@ describe('hotelService — fetchAllHotels', () => {
 });
 
 describe('hotelService — fetchHotels (paginated)', () => {
-  test('page 1 returns pageSize items', async () => {
+  test('page 1 returns just pageSize items, total = all hotels', async () => {
     const r = await flush(fetchHotels({ page: 1 }));
-    expect(r.data.length).toBeLessThanOrEqual(HOTELS.pageSize);
+    expect(r.data.length).toBe(HOTELS.pageSize);
     expect(r.total).toBe(mockHotels.length);
-    expect(r.hasMore).toBe(r.data.length < r.total);
+    expect(r.hasMore).toBe(true);
   });
 
-  test('page 2 returns 2× pageSize items (cumulative)', async () => {
+  test('page 2 returns the next pageSize slice (not cumulative)', async () => {
     const r = await flush(fetchHotels({ page: 2 }));
-    expect(r.data.length).toBeLessThanOrEqual(HOTELS.pageSize * 2);
+    expect(r.data.length).toBe(HOTELS.pageSize);
+    // First item of page 2 must equal mockHotels[pageSize] — proves the
+    // slice starts at (page-1)*pageSize and not at 0.
+    expect(r.data[0].id).toBe(mockHotels[HOTELS.pageSize].id);
   });
 
-  test('hasMore=false when all items are returned', async () => {
+  test('hasMore=false on the last page', async () => {
     const lastPage = Math.ceil(mockHotels.length / HOTELS.pageSize);
     const r = await flush(fetchHotels({ page: lastPage }));
     expect(r.hasMore).toBe(false);
-    expect(r.data.length).toBe(mockHotels.length);
+  });
+
+  test('pages stitched together cover every mock hotel exactly once', async () => {
+    const seen = new Set<number>();
+    const pageCount = Math.ceil(mockHotels.length / HOTELS.pageSize);
+    for (let p = 1; p <= pageCount; p++) {
+      const r = await flush(fetchHotels({ page: p }));
+      r.data.forEach((h) => seen.add(h.id));
+    }
+    expect(seen.size).toBe(mockHotels.length);
   });
 });

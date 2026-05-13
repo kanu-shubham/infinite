@@ -38,7 +38,10 @@ function applySorting(hotels: Hotel[], sortBy: SortKey | ''): Hotel[] {
 }
 
 function applyPagination(hotels: Hotel[], page: number, pageSize: number): PaginatedHotels {
-  const start = 0;
+  // Return only this page's slice. The infinite-scroll reducer appends
+  // `action.data` to existing hotels, so returning the cumulative slice
+  // (start=0) would re-include earlier pages and produce duplicates.
+  const start = (page - 1) * pageSize;
   const end = page * pageSize;
   return {
     data: hotels.slice(start, end),
