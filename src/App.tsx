@@ -1,5 +1,4 @@
 import React, { useCallback, useState } from 'react';
-import HotelListingPage from './features/hotels/HotelListingPage';
 import { FeedbackWidget } from './features/feedback';
 import './App.css';
 
@@ -10,17 +9,20 @@ export default function App(): JSX.Element {
 
   return (
     <div className="app">
-      <main>
-        <HotelListingPage />
+      <main className="app__shell">
+        <h1 className="app__title">Feature Rating Demo</h1>
+        <p className="app__lede">
+          Click the button below to open the feedback popup.
+        </p>
+        <button
+          type="button"
+          className="app__cta"
+          onClick={open}
+          aria-haspopup="dialog"
+        >
+          How would you rate this feature?
+        </button>
       </main>
-      <button
-        type="button"
-        className="app__feedback-fab"
-        onClick={open}
-        aria-haspopup="dialog"
-      >
-        Rate this feature
-      </button>
       <FeedbackWidget open={feedbackOpen} onClose={close} />
     </div>
   );
