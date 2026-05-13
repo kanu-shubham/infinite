@@ -1,7 +1,12 @@
-import React from "react";
-import "./ErrorMessage.css";
+import React from 'react';
+import './ErrorMessage.css';
 
-export default function ErrorMessage({ message, onRetry }) {
+export interface ErrorMessageProps {
+  message: string;
+  onRetry?: () => void;
+}
+
+export default function ErrorMessage({ message, onRetry }: ErrorMessageProps): JSX.Element {
   return (
     <div className="error-message">
       <div className="error-message__icon">!</div>

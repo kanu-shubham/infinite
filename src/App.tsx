@@ -1,9 +1,9 @@
-import React, { useCallback, useState } from "react";
-import HotelListingPage from "./features/hotels/HotelListingPage";
-import { FeedbackWidget } from "./features/feedback";
-import "./App.css";
+import React, { useCallback, useState } from 'react';
+import HotelListingPage from './features/hotels/HotelListingPage';
+import { FeedbackWidget } from './features/feedback';
+import './App.css';
 
-export default function App() {
+export default function App(): JSX.Element {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const open = useCallback(() => setFeedbackOpen(true), []);
   const close = useCallback(() => setFeedbackOpen(false), []);

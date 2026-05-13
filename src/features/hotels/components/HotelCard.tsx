@@ -1,24 +1,30 @@
-import React, { memo } from "react";
-import "./HotelCard.css";
+import React, { memo } from 'react';
+import type { Hotel } from '../types';
+import './HotelCard.css';
 
-// memo: hotel objects are stable references from the service layer.
-// Without memo, every loadMore call re-renders all existing cards because
-// the parent array reference changes ([...prev, ...newItems]).
-const StarRating = memo(function StarRating({ rating }) {
+interface StarRatingProps {
+  rating: number;
+}
+
+const StarRating = memo(function StarRating({ rating }: StarRatingProps): JSX.Element {
   const fullStars = Math.floor(rating);
   const hasHalf = rating - fullStars >= 0.5;
   const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
 
   return (
     <span className="star-rating" aria-label={`${rating} out of 5 stars`}>
-      {"★".repeat(fullStars)}
-      {hasHalf && "½"}
-      {"☆".repeat(emptyStars)}
+      {'★'.repeat(fullStars)}
+      {hasHalf && '½'}
+      {'☆'.repeat(emptyStars)}
     </span>
   );
 });
 
-const HotelCard = memo(function HotelCard({ hotel }) {
+export interface HotelCardProps {
+  hotel: Hotel;
+}
+
+const HotelCard = memo(function HotelCard({ hotel }: HotelCardProps): JSX.Element {
   return (
     <article className="hotel-card">
       <div className="hotel-card__image-wrapper">

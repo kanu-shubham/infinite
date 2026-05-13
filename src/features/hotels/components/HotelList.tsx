@@ -1,11 +1,23 @@
-import React from "react";
-import HotelCard from "./HotelCard";
-import HotelSkeletonGrid from "./HotelSkeleton";
-import LoadingSpinner from "../../../components/common/LoadingSpinner";
-import "./HotelList.css";
+import React from 'react';
+import HotelCard from './HotelCard';
+import HotelSkeletonGrid from './HotelSkeleton';
+import LoadingSpinner from '../../../components/common/LoadingSpinner';
+import type { Hotel } from '../types';
+import './HotelList.css';
 
-export default function HotelList({ hotels, isLoading, hasMore, sentinelRef }) {
-  // Initial load — no hotels yet, show skeleton grid instead of spinner
+export interface HotelListProps {
+  hotels: Hotel[];
+  isLoading: boolean;
+  hasMore: boolean;
+  sentinelRef: (node: Element | null) => void;
+}
+
+export default function HotelList({
+  hotels,
+  isLoading,
+  hasMore,
+  sentinelRef,
+}: HotelListProps): JSX.Element {
   if (isLoading && hotels.length === 0) {
     return <HotelSkeletonGrid count={8} />;
   }
@@ -29,9 +41,8 @@ export default function HotelList({ hotels, isLoading, hasMore, sentinelRef }) {
         ))}
       </div>
 
-      {/* Infinite scroll sentinel — spinner only for "load more", not initial */}
       {hasMore && (
-        <div ref={sentinelRef} className="hotel-list__sentinel">
+        <div ref={sentinelRef as unknown as React.Ref<HTMLDivElement>} className="hotel-list__sentinel">
           <LoadingSpinner size="small" text="Loading more hotels..." />
         </div>
       )}

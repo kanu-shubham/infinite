@@ -1,30 +1,41 @@
-import React, { useState } from "react";
-import useHotelFilters from "./hooks/useHotelFilters";
-import useHotels from "./hooks/useHotels";
-import useAllHotels from "./hooks/useAllHotels";
-import useInfiniteScroll from "./hooks/useInfiniteScroll";
-import HotelFilters from "./components/HotelFilters";
-import HotelSort from "./components/HotelSort";
-import HotelList from "./components/HotelList";
-import VirtualHotelList from "./components/VirtualHotelList";
-import ErrorMessage from "../../components/common/ErrorMessage";
-import "./HotelListingPage.css";
+import React, { useState } from 'react';
+import useHotelFilters from './hooks/useHotelFilters';
+import useHotels from './hooks/useHotels';
+import useAllHotels from './hooks/useAllHotels';
+import useInfiniteScroll from './hooks/useInfiniteScroll';
+import HotelFilters from './components/HotelFilters';
+import HotelSort from './components/HotelSort';
+import HotelList from './components/HotelList';
+import VirtualHotelList, { VirtualStrategy } from './components/VirtualHotelList';
+import ErrorMessage from '../../components/common/ErrorMessage';
+import './HotelListingPage.css';
 
-const TABS = [
-  { id: "virtual", label: "Virtualized" },
-  { id: "standard", label: "Standard" },
+type TabId = 'virtual' | 'standard';
+
+interface Tab {
+  id: TabId;
+  label: string;
+}
+
+interface Strategy {
+  id: VirtualStrategy;
+  label: string;
+}
+
+const TABS: ReadonlyArray<Tab> = [
+  { id: 'virtual',  label: 'Virtualized' },
+  { id: 'standard', label: 'Standard'    },
 ];
 
-const STRATEGIES = [
-  { id: "container", label: "Container Scroll" },
-  { id: "window",    label: "Window Scroll" },
+const STRATEGIES: ReadonlyArray<Strategy> = [
+  { id: 'container', label: 'Container Scroll' },
+  { id: 'window',    label: 'Window Scroll'    },
 ];
 
-export default function HotelListingPage() {
-  const [activeTab, setActiveTab]         = useState("virtual");
-  const [strategy, setStrategy]           = useState("container");
+export default function HotelListingPage(): JSX.Element {
+  const [activeTab, setActiveTab] = useState<TabId>('virtual');
+  const [strategy, setStrategy] = useState<VirtualStrategy>('container');
 
-  // ── Shared filter + sort state (debounced search inside) ──────────────
   const {
     rawFilters,
     filters,
@@ -35,7 +46,6 @@ export default function HotelListingPage() {
     resetFilters,
   } = useHotelFilters();
 
-  // ── Tab A: all hotels → virtualized rendering ─────────────────────────
   const {
     hotels: allHotels,
     isLoading: allLoading,
@@ -43,7 +53,6 @@ export default function HotelListingPage() {
     retry: allRetry,
   } = useAllHotels({ filters, sortBy });
 
-  // ── Tab B: paginated hotels → infinite scroll ─────────────────────────
   const {
     hotels,
     hasMore,
@@ -60,7 +69,6 @@ export default function HotelListingPage() {
 
   return (
     <div className="hotel-listing">
-      {/* ── Header ── */}
       <header className="hotel-listing__header">
         <h1 className="hotel-listing__title">Find Your Perfect Stay</h1>
         <p className="hotel-listing__subtitle">
@@ -68,7 +76,6 @@ export default function HotelListingPage() {
         </p>
       </header>
 
-      {/* ── Shared filters ── */}
       <HotelFilters
         filters={rawFilters}
         onFilterChange={updateFilter}
@@ -76,13 +83,12 @@ export default function HotelListingPage() {
         hasActiveFilters={hasActiveFilters}
       />
 
-      {/* ── Toolbar: tabs + sort ── */}
       <div className="hotel-listing__toolbar">
         <div className="tab-bar">
           {TABS.map((tab) => (
             <button
               key={tab.id}
-              className={`tab-bar__btn${activeTab === tab.id ? " tab-bar__btn--active" : ""}`}
+              className={`tab-bar__btn${activeTab === tab.id ? ' tab-bar__btn--active' : ''}`}
               onClick={() => setActiveTab(tab.id)}
             >
               {tab.label}
@@ -93,12 +99,11 @@ export default function HotelListingPage() {
         <HotelSort
           value={sortBy}
           onChange={updateSort}
-          totalCount={activeTab === "virtual" ? allHotels.length : totalCount}
+          totalCount={activeTab === 'virtual' ? allHotels.length : totalCount}
         />
       </div>
 
-      {/* ── Virtualized tab ── */}
-      {activeTab === "virtual" && (
+      {activeTab === 'virtual' && (
         <section className="hotel-listing__section">
           <div className="hotel-listing__section-header">
             <h2 className="hotel-listing__section-title">
@@ -111,7 +116,7 @@ export default function HotelListingPage() {
               {STRATEGIES.map((s) => (
                 <button
                   key={s.id}
-                  className={`strategy-toggle__btn${strategy === s.id ? " strategy-toggle__btn--active" : ""}`}
+                  className={`strategy-toggle__btn${strategy === s.id ? ' strategy-toggle__btn--active' : ''}`}
                   onClick={() => setStrategy(s.id)}
                 >
                   {s.label}
@@ -130,8 +135,7 @@ export default function HotelListingPage() {
         </section>
       )}
 
-      {/* ── Standard tab ── */}
-      {activeTab === "standard" && (
+      {activeTab === 'standard' && (
         <section className="hotel-listing__section">
           <div className="hotel-listing__section-header">
             <h2 className="hotel-listing__section-title">

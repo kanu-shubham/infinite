@@ -1,11 +1,12 @@
-import { mockHotels } from "../data/mockHotels";
-import { HOTELS } from "../constants";
+import { mockHotels } from '../data/mockHotels';
+import { HOTELS } from '../constants';
+import type { Hotel, HotelFilters, PaginatedHotels, SortField, SortKey } from '../types';
 
-function applyFilters(hotels, filters) {
+function applyFilters(hotels: Hotel[], filters: Partial<HotelFilters>): Hotel[] {
   let result = hotels;
 
   if (filters.priceRange) {
-    const [min, max] = filters.priceRange.split("-").map(Number);
+    const [min, max] = filters.priceRange.split('-').map(Number);
     result = result.filter((h) => h.price >= min && h.price <= max);
   }
 
@@ -19,26 +20,24 @@ function applyFilters(hotels, filters) {
     result = result.filter(
       (h) =>
         h.name.toLowerCase().includes(term) ||
-        h.location.toLowerCase().includes(term)
+        h.location.toLowerCase().includes(term),
     );
   }
 
   return result;
 }
 
-function applySorting(hotels, sortBy) {
+function applySorting(hotels: Hotel[], sortBy: SortKey | ''): Hotel[] {
   if (!sortBy) return hotels;
 
-  const [field, direction] = sortBy.split("_");
-  const sorted = [...hotels].sort((a, b) => {
-    if (direction === "asc") return a[field] - b[field];
+  const [field, direction] = sortBy.split('_') as [SortField, 'asc' | 'desc'];
+  return [...hotels].sort((a, b) => {
+    if (direction === 'asc') return a[field] - b[field];
     return b[field] - a[field];
   });
-
-  return sorted;
 }
 
-function applyPagination(hotels, page, pageSize) {
+function applyPagination(hotels: Hotel[], page: number, pageSize: number): PaginatedHotels {
   const start = 0;
   const end = page * pageSize;
   return {
@@ -48,27 +47,40 @@ function applyPagination(hotels, page, pageSize) {
   };
 }
 
+export interface FetchOptions {
+  filters?: Partial<HotelFilters>;
+  sortBy?: SortKey | '';
+}
+
+export interface FetchPageOptions extends FetchOptions {
+  page?: number;
+}
+
 /** Fetches ALL hotels matching filters+sort — used by the virtualized list. */
-export function fetchAllHotels({ filters = {}, sortBy = "" } = {}) {
+export function fetchAllHotels({ filters = {}, sortBy = '' }: FetchOptions = {}): Promise<Hotel[]> {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
       try {
         const filtered = applyFilters(mockHotels, filters);
         const sorted = applySorting(filtered, sortBy);
         resolve(sorted);
-      } catch (err) {
-        reject(new Error("An unexpected error occurred."));
+      } catch {
+        reject(new Error('An unexpected error occurred.'));
       }
     }, HOTELS.simulatedDelay);
   });
 }
 
 /** Fetches a paginated slice — used by the standard infinite-scroll list. */
-export function fetchHotels({ filters = {}, sortBy = "", page = 1 } = {}) {
+export function fetchHotels({
+  filters = {},
+  sortBy = '',
+  page = 1,
+}: FetchPageOptions = {}): Promise<PaginatedHotels> {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
       if (HOTELS.errorRate > 0 && Math.random() < HOTELS.errorRate) {
-        reject(new Error("Failed to fetch hotels. Please try again."));
+        reject(new Error('Failed to fetch hotels. Please try again.'));
         return;
       }
 
@@ -76,10 +88,9 @@ export function fetchHotels({ filters = {}, sortBy = "", page = 1 } = {}) {
         const filtered = applyFilters(mockHotels, filters);
         const sorted = applySorting(filtered, sortBy);
         const paginated = applyPagination(sorted, page, HOTELS.pageSize);
-
         resolve(paginated);
-      } catch (err) {
-        reject(new Error("An unexpected error occurred."));
+      } catch {
+        reject(new Error('An unexpected error occurred.'));
       }
     }, HOTELS.simulatedDelay);
   });

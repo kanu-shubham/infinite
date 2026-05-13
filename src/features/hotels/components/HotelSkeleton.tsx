@@ -1,8 +1,7 @@
-import React from "react";
-import "./HotelSkeleton.css";
+import React from 'react';
+import './HotelSkeleton.css';
 
-/** Single shimmer card — mirrors the shape of HotelCard. */
-function HotelSkeletonCard() {
+function HotelSkeletonCard(): JSX.Element {
   return (
     <div className="hotel-skeleton" aria-hidden="true">
       <div className="hotel-skeleton__image" />
@@ -23,14 +22,13 @@ function HotelSkeletonCard() {
   );
 }
 
-/** Renders `count` skeleton cards in the same grid as HotelList. */
-export default function HotelSkeletonGrid({ count = 8 }) {
+export interface HotelSkeletonGridProps {
+  count?: number;
+}
+
+export default function HotelSkeletonGrid({ count = 8 }: HotelSkeletonGridProps): JSX.Element {
   return (
-    <div
-      className="hotel-skeleton-grid"
-      role="status"
-      aria-label="Loading hotels…"
-    >
+    <div className="hotel-skeleton-grid" role="status" aria-label="Loading hotels…">
       {Array.from({ length: count }, (_, i) => (
         <HotelSkeletonCard key={i} />
       ))}
