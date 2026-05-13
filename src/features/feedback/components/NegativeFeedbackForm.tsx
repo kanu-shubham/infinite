@@ -29,7 +29,7 @@ export function NegativeFeedbackForm({
   };
 
   return (
-    <form className="fb-negative" onSubmit={handleSubmit} noValidate>
+    <form className="fb-negative" onSubmit={handleSubmit} noValidate aria-busy={submitting}>
       <h2 id={titleId} className="fb-negative__title">How can we make things better?</h2>
       <label className="fb-visually-hidden" htmlFor={`${titleId}-text`}>
         Your feedback
@@ -43,12 +43,19 @@ export function NegativeFeedbackForm({
         rows={4}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
+        disabled={submitting}
         autoFocus
         data-testid="fb-negative-text"
       />
       {error && (
         <p id={errorId} role="alert" className="fb-negative__error">{error}</p>
       )}
+      {/* Polite live region: announces "Submitting your feedback…" once the
+          form enters the SUBMITTING state. Visually hidden — the button
+          label changes for sighted users; this is the screen-reader twin. */}
+      <span role="status" aria-live="polite" className="fb-visually-hidden" data-testid="fb-negative-live">
+        {submitting ? 'Submitting your feedback…' : ''}
+      </span>
       <div className="fb-negative__footer">
         <button
           type="submit"

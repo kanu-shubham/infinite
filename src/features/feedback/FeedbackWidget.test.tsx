@@ -76,6 +76,26 @@ describe('<FeedbackWidget />', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  test('NEGATIVE submission announces "Submitting" to screen readers while pending', async () => {
+    // Hold the submit promise open so we can inspect the in-flight state.
+    let resolve!: () => void;
+    const submitFeedback = jest.fn().mockImplementation(
+      () => new Promise<void>((r) => { resolve = r; }),
+    );
+    setup({ submitFeedback });
+
+    fireEvent.click(screen.getByRole('button', { name: /negative/i }));
+    fireEvent.change(screen.getByTestId('fb-negative-text'), { target: { value: 'bug' } });
+    fireEvent.click(screen.getByTestId('fb-negative-submit'));
+
+    const live = screen.getByTestId('fb-negative-live');
+    expect(live).toHaveAttribute('aria-live', 'polite');
+    expect(live).toHaveTextContent(/submitting your feedback/i);
+    expect(screen.getByTestId('fb-negative-text')).toBeDisabled();
+
+    await act(async () => { resolve(); });
+  });
+
   test('NEGATIVE submission failure surfaces error and stays on form', async () => {
     const submitFeedback = jest.fn().mockRejectedValue(new Error('network down'));
     setup({ submitFeedback });
