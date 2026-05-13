@@ -1,6 +1,22 @@
 import React, { useCallback, useState } from 'react';
 import { FeedbackWidget } from './features/feedback';
+import type { FeedbackPayload } from './features/feedback';
 import './App.css';
+
+/**
+ * Demo submit implementation. The real service POSTs to /api/feedback,
+ * which doesn't exist in this standalone demo (dev server returns 405),
+ * so we inject a fake here that just resolves after a small delay to
+ * exercise the SUBMITTING → THANK_YOU transition end-to-end.
+ *
+ * In a real bunq app this prop is omitted and the production
+ * submitFeedback service is used.
+ */
+function demoSubmit(payload: FeedbackPayload): Promise<unknown> {
+  // eslint-disable-next-line no-console
+  console.info('[feedback demo] submitted:', payload);
+  return new Promise((resolve) => setTimeout(resolve, 400));
+}
 
 export default function App(): JSX.Element {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -23,7 +39,11 @@ export default function App(): JSX.Element {
           How would you rate this feature?
         </button>
       </main>
-      <FeedbackWidget open={feedbackOpen} onClose={close} />
+      <FeedbackWidget
+        open={feedbackOpen}
+        onClose={close}
+        submitFeedback={demoSubmit}
+      />
     </div>
   );
 }
