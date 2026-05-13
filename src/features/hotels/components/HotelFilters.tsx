@@ -35,13 +35,13 @@ export default function HotelFilters({
   );
 
   return (
-    <div className="hotel-filters">
+    <div className="hotel-filters" role="search" aria-label="Filter hotels">
       <div className="hotel-filters__field">
         <label className="hotel-filters__label" htmlFor="search">Search</label>
         <input
           id="search"
           className="hotel-filters__input"
-          type="text"
+          type="search"
           placeholder="Hotel name or location..."
           value={filters.search}
           onChange={handleSearchChange}
@@ -77,7 +77,12 @@ export default function HotelFilters({
       </div>
 
       {hasActiveFilters && (
-        <button className="hotel-filters__reset" onClick={onReset}>
+        <button
+          type="button"
+          className="hotel-filters__reset"
+          onClick={onReset}
+          aria-label="Clear all active filters"
+        >
           Clear Filters
         </button>
       )}

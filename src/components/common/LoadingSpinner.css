@@ -39,3 +39,10 @@
     transform: rotate(360deg);
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner__circle {
+    animation: none;
+    border-top-color: #2563eb;
+  }
+}

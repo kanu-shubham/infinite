@@ -13,9 +13,14 @@ export default function LoadingSpinner({
   text = 'Loading...',
 }: LoadingSpinnerProps): JSX.Element {
   return (
-    <div className={`loading-spinner loading-spinner--${size}`}>
-      <div className="loading-spinner__circle" />
-      {text && <p className="loading-spinner__text">{text}</p>}
+    <div
+      className={`loading-spinner loading-spinner--${size}`}
+      role="status"
+      aria-live="polite"
+      aria-label={text || 'Loading'}
+    >
+      <div className="loading-spinner__circle" aria-hidden="true" />
+      {text && <p className="loading-spinner__text" aria-hidden="true">{text}</p>}
     </div>
   );
 }

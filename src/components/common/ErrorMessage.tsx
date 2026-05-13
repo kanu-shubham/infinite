@@ -8,11 +8,15 @@ export interface ErrorMessageProps {
 
 export default function ErrorMessage({ message, onRetry }: ErrorMessageProps): JSX.Element {
   return (
-    <div className="error-message">
-      <div className="error-message__icon">!</div>
+    <div className="error-message" role="alert">
+      <div className="error-message__icon" aria-hidden="true">!</div>
       <p className="error-message__text">{message}</p>
       {onRetry && (
-        <button className="error-message__retry" onClick={onRetry}>
+        <button
+          type="button"
+          className="error-message__retry"
+          onClick={onRetry}
+        >
           Try Again
         </button>
       )}

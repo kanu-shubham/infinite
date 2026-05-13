@@ -116,3 +116,14 @@
   background: #e0e7ff;
   color: #4338ca;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .hotel-card,
+  .hotel-card__image {
+    transition: none;
+  }
+  .hotel-card:hover,
+  .hotel-card:hover .hotel-card__image {
+    transform: none;
+  }
+}

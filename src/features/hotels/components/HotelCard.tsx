@@ -12,10 +12,12 @@ const StarRating = memo(function StarRating({ rating }: StarRatingProps): JSX.El
   const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
 
   return (
-    <span className="star-rating" aria-label={`${rating} out of 5 stars`}>
-      {'★'.repeat(fullStars)}
-      {hasHalf && '½'}
-      {'☆'.repeat(emptyStars)}
+    <span className="star-rating" role="img" aria-label={`${rating} out of 5 stars`}>
+      <span aria-hidden="true">
+        {'★'.repeat(fullStars)}
+        {hasHalf && '½'}
+        {'☆'.repeat(emptyStars)}
+      </span>
     </span>
   );
 });
@@ -26,15 +28,20 @@ export interface HotelCardProps {
 
 const HotelCard = memo(function HotelCard({ hotel }: HotelCardProps): JSX.Element {
   return (
-    <article className="hotel-card">
+    <article
+      className="hotel-card"
+      aria-label={`${hotel.name}, ${hotel.location}, $${hotel.price} per night, rated ${hotel.rating} out of 5`}
+    >
       <div className="hotel-card__image-wrapper">
         <img
           className="hotel-card__image"
           src={hotel.image}
-          alt={hotel.name}
+          alt={`Exterior view of ${hotel.name} in ${hotel.location}`}
           loading="lazy"
         />
-        <span className="hotel-card__price">${hotel.price}<small>/night</small></span>
+        <span className="hotel-card__price" aria-hidden="true">
+          ${hotel.price}<small>/night</small>
+        </span>
       </div>
       <div className="hotel-card__body">
         <h3 className="hotel-card__name">{hotel.name}</h3>

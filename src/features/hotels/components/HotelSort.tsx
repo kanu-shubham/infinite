@@ -17,7 +17,7 @@ export default function HotelSort({ value, onChange, totalCount }: HotelSortProp
 
   return (
     <div className="hotel-sort">
-      <span className="hotel-sort__count">
+      <span className="hotel-sort__count" aria-live="polite" aria-atomic="true">
         {totalCount} {totalCount === 1 ? 'hotel' : 'hotels'} found
       </span>
       <div className="hotel-sort__control">

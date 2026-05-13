@@ -10,7 +10,9 @@ export default function App(): JSX.Element {
 
   return (
     <div className="app">
-      <HotelListingPage />
+      <main>
+        <HotelListingPage />
+      </main>
       <button
         type="button"
         className="app__feedback-fab"

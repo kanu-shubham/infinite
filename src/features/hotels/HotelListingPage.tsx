@@ -83,11 +83,21 @@ export default function HotelListingPage(): JSX.Element {
         hasActiveFilters={hasActiveFilters}
       />
 
+      {/* Live region for screen-reader-only result count announcements. */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {!isLoading && activeTab === 'standard' && `${totalCount} hotels found`}
+        {!allLoading && activeTab === 'virtual' && `${allHotels.length} hotels found`}
+      </div>
+
       <div className="hotel-listing__toolbar">
-        <div className="tab-bar">
+        <div className="tab-bar" role="tablist" aria-label="List rendering mode">
           {TABS.map((tab) => (
             <button
               key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              aria-pressed={activeTab === tab.id}
               className={`tab-bar__btn${activeTab === tab.id ? ' tab-bar__btn--active' : ''}`}
               onClick={() => setActiveTab(tab.id)}
             >
@@ -104,7 +114,7 @@ export default function HotelListingPage(): JSX.Element {
       </div>
 
       {activeTab === 'virtual' && (
-        <section className="hotel-listing__section">
+        <section className="hotel-listing__section" role="tabpanel">
           <div className="hotel-listing__section-header">
             <h2 className="hotel-listing__section-title">
               Virtualized List
@@ -112,10 +122,12 @@ export default function HotelListingPage(): JSX.Element {
                 All matching hotels loaded; only visible rows rendered
               </span>
             </h2>
-            <div className="strategy-toggle">
+            <div className="strategy-toggle" role="group" aria-label="Virtualizer strategy">
               {STRATEGIES.map((s) => (
                 <button
                   key={s.id}
+                  type="button"
+                  aria-pressed={strategy === s.id}
                   className={`strategy-toggle__btn${strategy === s.id ? ' strategy-toggle__btn--active' : ''}`}
                   onClick={() => setStrategy(s.id)}
                 >
@@ -136,7 +148,7 @@ export default function HotelListingPage(): JSX.Element {
       )}
 
       {activeTab === 'standard' && (
-        <section className="hotel-listing__section">
+        <section className="hotel-listing__section" role="tabpanel">
           <div className="hotel-listing__section-header">
             <h2 className="hotel-listing__section-title">
               Standard List

@@ -34,21 +34,27 @@ export default function HotelList({
   }
 
   return (
-    <div className="hotel-list">
-      <div className="hotel-list__grid">
+    <div className="hotel-list" aria-busy={isLoading}>
+      <ul className="hotel-list__grid" role="list">
         {hotels.map((hotel) => (
-          <HotelCard key={hotel.id} hotel={hotel} />
+          <li key={hotel.id}>
+            <HotelCard hotel={hotel} />
+          </li>
         ))}
-      </div>
+      </ul>
 
       {hasMore && (
-        <div ref={sentinelRef as unknown as React.Ref<HTMLDivElement>} className="hotel-list__sentinel">
+        <div
+          ref={sentinelRef as unknown as React.Ref<HTMLDivElement>}
+          className="hotel-list__sentinel"
+          aria-hidden="true"
+        >
           <LoadingSpinner size="small" text="Loading more hotels..." />
         </div>
       )}
 
       {!hasMore && hotels.length > 0 && (
-        <p className="hotel-list__end">You've seen all results</p>
+        <p className="hotel-list__end" role="status">You've seen all results</p>
       )}
     </div>
   );
