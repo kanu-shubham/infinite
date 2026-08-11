@@ -1,0 +1,183 @@
+.pipeline__progress {
+  margin-bottom: 18px;
+}
+
+.pipeline__progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.pipeline__progress-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.pipeline__progress-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+}
+
+.pipeline__progress-track {
+  height: 6px;
+  background: #f0efec;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.pipeline__progress-fill {
+  height: 100%;
+  background: #2a78d6;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+/* ── Stage list ───────────────────────────────────────────────────────────── */
+.pipeline__stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pipeline__stage {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 12px;
+}
+
+.pipeline__stage-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pipeline__stage-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #898781;
+  border: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.pipeline__connector {
+  flex: 1;
+  width: 1px;
+  min-height: 14px;
+  background: #e5e7eb;
+  margin: 4px 0;
+}
+
+.pipeline__stage-body {
+  padding-bottom: 14px;
+  min-width: 0;
+}
+
+.pipeline__stage-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.pipeline__stage-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.pipeline__stage-duration {
+  font-size: 11px;
+  color: #898781;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pipeline__stage-note {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.45;
+}
+
+/* The status word is the non-colour channel for stage state. */
+.pipeline__stage-status {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #898781;
+}
+
+/* ── Per-status treatment ─────────────────────────────────────────────────── */
+.pipeline__stage--succeeded .pipeline__stage-icon {
+  background: #eaf7ea;
+  border-color: #bfe6bf;
+  color: #0b6b0b;
+}
+
+.pipeline__stage--succeeded .pipeline__stage-status {
+  color: #0b6b0b;
+}
+
+.pipeline__stage--running .pipeline__stage-icon {
+  background: #eaf2fd;
+  border-color: #2a78d6;
+  color: #1c5cab;
+  animation: pipeline-pulse 1.2s ease-in-out infinite;
+}
+
+.pipeline__stage--running .pipeline__stage-status {
+  color: #1c5cab;
+}
+
+.pipeline__stage--failed .pipeline__stage-icon {
+  background: #fdecec;
+  border-color: #f5c2c2;
+  color: #a52222;
+}
+
+.pipeline__stage--failed .pipeline__stage-status,
+.pipeline__stage--failed .pipeline__stage-note {
+  color: #a52222;
+}
+
+.pipeline__stage--skipped .pipeline__stage-label,
+.pipeline__stage--pending .pipeline__stage-label {
+  color: #898781;
+}
+
+@keyframes pipeline-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.12); opacity: 0.7; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pipeline__stage--running .pipeline__stage-icon {
+    animation: none;
+  }
+
+  .pipeline__progress-fill {
+    transition: none;
+  }
+}
+
+/* ── Compact variant (sidebar) ────────────────────────────────────────────── */
+.pipeline--compact .pipeline__stage-note,
+.pipeline--compact .pipeline__stage-status {
+  display: none;
+}
+
+.pipeline--compact .pipeline__stage-body {
+  padding-bottom: 8px;
+}

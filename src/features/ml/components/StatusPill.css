@@ -1,0 +1,65 @@
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.status-pill--medium {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.status-pill--small {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.status-pill__icon {
+  font-size: 10px;
+  line-height: 1;
+}
+
+/* Status tones are fixed — they never double as series colours. */
+.status-pill--good {
+  background: #eaf7ea;
+  border-color: #bfe6bf;
+  color: #0b6b0b;
+}
+
+.status-pill--critical {
+  background: #fdecec;
+  border-color: #f5c2c2;
+  color: #a52222;
+}
+
+.status-pill--info {
+  background: #eaf2fd;
+  border-color: #c3dbf7;
+  color: #1c5cab;
+}
+
+.status-pill--neutral {
+  background: #f3f4f6;
+  border-color: #e1e0d9;
+  color: #52514e;
+}
+
+/* The running pill breathes so an in-flight run is obvious at a glance. */
+.status-pill--info .status-pill__icon {
+  animation: status-pill-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes status-pill-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-pill--info .status-pill__icon {
+    animation: none;
+  }
+}

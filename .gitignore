@@ -1,2 +1,11 @@
 node_modules
 build
+
+# Python / backend
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+backend/artifacts/
+backend/.pytest-artifacts/

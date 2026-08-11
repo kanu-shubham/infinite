@@ -1,0 +1,126 @@
+.dataset-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Stat tiles ───────────────────────────────────────────────────────────── */
+.dataset-panel__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.stat-tile__label {
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #898781;
+}
+
+.stat-tile__value {
+  font-size: 22px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.stat-tile__note {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.45;
+}
+
+/* ── Charts ───────────────────────────────────────────────────────────────── */
+.dataset-panel__charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.dataset-panel__summary {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: 12px;
+}
+
+.dataset-panel__summary-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dataset-panel__summary-row dt {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: #898781;
+}
+
+.dataset-panel__summary-row dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Preview table ────────────────────────────────────────────────────────── */
+.dataset-panel__preview {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px 18px 18px;
+}
+
+.dataset-panel__preview-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.dataset-panel__table-wrap {
+  overflow-x: auto;
+}
+
+.dataset-panel__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dataset-panel__table th,
+.dataset-panel__table td {
+  padding: 7px 12px 7px 0;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.dataset-panel__table th {
+  color: #52514e;
+  font-weight: 600;
+}
+
+.dataset-panel__table td {
+  color: #111827;
+}
+
+.dataset-panel__null {
+  color: #a52222;
+  font-style: italic;
+}

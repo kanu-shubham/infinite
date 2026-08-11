@@ -9,3 +9,48 @@
 *, *::before, *::after {
   box-sizing: border-box;
 }
+
+/* ── Top-level navigation ────────────────────────────────────────────────── */
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.app-nav__brand {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #111827;
+}
+
+.app-nav__links {
+  display: flex;
+}
+
+.app-nav__link {
+  padding: 14px 16px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.app-nav__link:hover {
+  color: #111827;
+}
+
+.app-nav__link--active {
+  color: #111827;
+  font-weight: 600;
+  border-bottom-color: #2a78d6;
+}

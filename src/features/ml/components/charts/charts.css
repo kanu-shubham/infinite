@@ -1,0 +1,315 @@
+/* ── Chart card ───────────────────────────────────────────────────────────── */
+.chart-card {
+  margin: 0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px 18px 18px;
+}
+
+.chart-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.chart-card__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.chart-card__subtitle {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 3px 0 0;
+  line-height: 1.45;
+}
+
+.chart-card__toggle {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #52514e;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.chart-card__toggle:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.chart-card__footnote {
+  margin: 12px 0 0;
+  font-size: 11px;
+  color: #898781;
+  line-height: 1.5;
+}
+
+.chart-card__table-wrap {
+  overflow-x: auto;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.chart-card__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-card__table th,
+.chart-card__table td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+  white-space: nowrap;
+}
+
+.chart-card__table th {
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  color: #52514e;
+  font-weight: 600;
+}
+
+.chart-card__table td {
+  color: #111827;
+}
+
+.chart-card__table .is-right {
+  text-align: right;
+}
+
+.chart-empty {
+  margin: 0;
+  padding: 24px 0;
+  text-align: center;
+  font-size: 13px;
+  color: #898781;
+}
+
+/* ── Horizontal bars ──────────────────────────────────────────────────────── */
+.bar-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bar-list__row {
+  display: grid;
+  grid-template-columns: minmax(110px, 44%) 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.bar-list__label {
+  font-size: 12px;
+  color: #52514e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-list__sublabel {
+  color: #898781;
+}
+
+.bar-list__sublabel::before {
+  content: "·";
+  margin: 0 4px;
+}
+
+.bar-list__track {
+  position: relative;
+  display: block;
+  height: 14px;
+}
+
+.bar-list__bar {
+  display: block;
+  height: 100%;
+  background: #2a78d6;
+  /* Square at the baseline, 4px rounded at the data end. */
+  border-radius: 0 4px 4px 0;
+  transition: width 0.25s ease;
+}
+
+.bar-list__value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+  min-width: 48px;
+  text-align: right;
+}
+
+/* Hover layer: the whole track is the hit target, not the bar alone. */
+.bar-list__tooltip {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 2;
+  display: none;
+  padding: 6px 9px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 11px;
+  line-height: 1.4;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.bar-list__track:hover .bar-list__tooltip {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-list__bar {
+    transition: none;
+  }
+}
+
+/* ── SVG charts ───────────────────────────────────────────────────────────── */
+.chart-frame {
+  position: relative;
+  width: 100%;
+}
+
+.chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-svg:focus-visible {
+  outline: 2px solid #2a78d6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.chart-svg__tick {
+  font-size: 10px;
+  fill: #898781;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-svg__axis-title {
+  font-size: 11px;
+  fill: #52514e;
+}
+
+.chart-svg__annotation {
+  font-size: 10px;
+  fill: #898781;
+}
+
+.chart-tooltip {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 9px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 11px;
+  line-height: 1.4;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 10px));
+}
+
+.chart-tooltip strong {
+  font-weight: 600;
+}
+
+.chart-tooltip span {
+  color: #d5d4cf;
+}
+
+/* ── Confusion matrix ─────────────────────────────────────────────────────── */
+.confusion {
+  overflow-x: auto;
+}
+
+.confusion__table {
+  width: 100%;
+  border-collapse: separate;
+  /* The 2px gap is the surface doing the separating — no cell borders. */
+  border-spacing: 2px;
+}
+
+.confusion__caption {
+  caption-side: bottom;
+  margin-top: 10px;
+  font-size: 11px;
+  color: #898781;
+  text-align: left;
+  line-height: 1.5;
+}
+
+.confusion__table thead th {
+  font-size: 11px;
+  font-weight: 600;
+  color: #52514e;
+  padding: 0 0 6px;
+  text-align: center;
+}
+
+.confusion__table tbody th {
+  font-size: 11px;
+  font-weight: 600;
+  color: #52514e;
+  text-align: right;
+  padding-right: 10px;
+  white-space: nowrap;
+}
+
+.confusion__corner {
+  border: none;
+}
+
+.confusion__cell {
+  padding: 12px 10px;
+  border-radius: 6px;
+  text-align: center;
+  vertical-align: middle;
+  min-width: 96px;
+}
+
+.confusion__count {
+  display: block;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.confusion__share {
+  display: block;
+  font-size: 11px;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+.confusion__name {
+  display: block;
+  font-size: 10px;
+  margin-top: 5px;
+  opacity: 0.85;
+}

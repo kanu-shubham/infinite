@@ -1,0 +1,205 @@
+.predict {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 16px;
+  align-items: start;
+}
+
+.predict__form {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.predict__toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.predict__intro {
+  flex: 1;
+  min-width: 220px;
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.predict__intro code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  background: #f3f4f6;
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: #1c5cab;
+  word-break: break-all;
+}
+
+.predict__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.predict__field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.predict__label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #52514e;
+}
+
+.predict__control {
+  width: 100%;
+  padding: 7px 9px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #111827;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.predict__control:focus {
+  outline: none;
+  border-color: #2a78d6;
+  box-shadow: 0 0 0 3px rgba(42, 120, 214, 0.12);
+}
+
+.predict__secondary {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  color: #1c5cab;
+  background: #f5f9fe;
+  border: 1px solid #c3dbf7;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.predict__secondary:hover:not(:disabled) {
+  background: #eaf2fd;
+}
+
+.predict__secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.predict__submit {
+  margin-top: 18px;
+  padding: 9px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #ffffff;
+  background: #2a78d6;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.predict__submit:hover:not(:disabled) {
+  background: #1c5cab;
+}
+
+.predict__submit:disabled {
+  background: #c3dbf7;
+  cursor: not-allowed;
+}
+
+/* ── Result ───────────────────────────────────────────────────────────────── */
+.predict__result {
+  position: sticky;
+  top: 16px;
+}
+
+.predict__placeholder {
+  margin: 0;
+  padding: 18px;
+  background: #f9fafb;
+  border: 1px dashed #e5e7eb;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #898781;
+  line-height: 1.55;
+}
+
+.predict__outcome {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px;
+  background: #ffffff;
+  border: 1px solid #2a78d6;
+  border-radius: 10px;
+}
+
+.predict__outcome-label {
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #898781;
+}
+
+.predict__outcome-value {
+  font-size: 28px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.15;
+}
+
+.predict__probability-label {
+  margin-top: 12px;
+  font-size: 11px;
+  color: #52514e;
+}
+
+/* Meter track is a lighter step of the fill's own ramp. */
+.predict__meter {
+  height: 8px;
+  background: #cde2fb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.predict__meter-fill {
+  height: 100%;
+  background: #2a78d6;
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.predict__probability-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .predict__meter-fill {
+    transition: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .predict {
+    grid-template-columns: 1fr;
+  }
+
+  .predict__result {
+    position: static;
+  }
+}

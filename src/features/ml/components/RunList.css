@@ -1,0 +1,135 @@
+.run-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.run-list__empty {
+  margin: 0;
+  padding: 20px 4px;
+  font-size: 13px;
+  color: #898781;
+  line-height: 1.55;
+}
+
+.run-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.run-card:hover {
+  border-color: #c3dbf7;
+}
+
+.run-card--active {
+  border-color: #2a78d6;
+  background: #f5f9fe;
+}
+
+.run-card__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 8px 12px 14px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.run-card__main:focus-visible {
+  outline: 2px solid #2a78d6;
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
+.run-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.run-card__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.run-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-size: 11px;
+  color: #898781;
+}
+
+.run-card__metric {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.run-card__metric-label {
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  color: #898781;
+}
+
+.run-card__metric-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+}
+
+.run-card__duration {
+  margin-left: auto;
+  font-size: 11px;
+  color: #898781;
+  font-variant-numeric: tabular-nums;
+}
+
+.run-card__error {
+  font-size: 11px;
+  color: #a52222;
+  line-height: 1.45;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.run-card__delete {
+  flex-shrink: 0;
+  margin: 10px 10px 0 0;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: #c3c2b7;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.run-card__delete:hover {
+  background: #fdecec;
+  color: #a52222;
+}
