@@ -9,3 +9,7 @@ venv/
 .pytest_cache/
 backend/artifacts/
 backend/.pytest-artifacts/
+
+# Orchestration local state
+.airflow/
+.airflow-venv/

@@ -1,0 +1,8 @@
+# Flyte — runs locally in the same environment as the backend
+flytekit>=1.13,<2.0
+pyarrow>=15.0          # Flyte serialises DataFrames between tasks as Parquet
+
+# Airflow — install in a SEPARATE venv. It pins dependencies tightly enough to
+# downgrade the backend's pandas/numpy if installed alongside them.
+#   python -m venv .airflow-venv
+#   .airflow-venv/bin/pip install apache-airflow==3.3.0 pandas scikit-learn pyarrow
