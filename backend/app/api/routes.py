@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
-from ..ml import inference, registry, training
+from ..ml import feature_store, inference, model_cache, registry, training
 from ..ml.dataset import (
     DEFAULT_TARGET,
     TARGETS,
@@ -17,7 +17,9 @@ from ..ml.pipeline import PIPELINE_STEPS
 from ..ml.training import STAGES
 from ..schemas import (
     DeleteResponse,
+    EntityPredictRequest,
     HealthResponse,
+    MaterializeRequest,
     PredictRequest,
     PredictResponse,
     RunAccepted,
@@ -112,11 +114,15 @@ def get_run(run_id: str) -> Dict[str, Any]:
 def delete_run(run_id: str) -> DeleteResponse:
     if not registry.delete(run_id):
         raise HTTPException(status_code=404, detail=f"Run '{run_id}' not found.")
+    # Drop it from memory too, or the cache would keep serving a model whose
+    # artifact no longer exists.
+    model_cache.invalidate(run_id)
     return DeleteResponse(run_id=run_id, deleted=True)
 
 
 @router.post("/runs/{run_id}/predict", response_model=PredictResponse)
 def predict(run_id: str, request: PredictRequest) -> PredictResponse:
+    """Score rows whose feature values are supplied in the request body."""
     run = _require_run(run_id)
     try:
         predictions = inference.predict(run, request.rows)
@@ -131,3 +137,48 @@ def predict(run_id: str, request: PredictRequest) -> PredictResponse:
         target=run["config"]["target"],
         predictions=predictions,
     )
+
+
+@router.post("/runs/{run_id}/predict-by-id", response_model=PredictResponse)
+def predict_by_id(run_id: str, request: EntityPredictRequest) -> PredictResponse:
+    """Score bookings by identifier, reading features from the online store.
+
+    This is the production shape: the caller has an id, not a feature vector.
+    """
+    run = _require_run(run_id)
+    try:
+        predictions, diagnostics = inference.predict_by_entity(run, request.entity_ids)
+    except inference.ModelUnavailable as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except feature_store.FeatureStoreError as error:
+        # 503, not 500: the model is fine, the feature layer is not serving
+        # safely. A caller may retry, or fall back.
+        raise HTTPException(status_code=503, detail=str(error)) from error
+
+    return PredictResponse(
+        run_id=run_id,
+        task=run["config"]["task"],
+        target=run["config"]["target"],
+        predictions=predictions,
+        diagnostics=diagnostics,
+    )
+
+
+# ── Feature store ────────────────────────────────────────────────────────────
+@router.post("/feature-store/materialize")
+def materialize_features(request: MaterializeRequest) -> Dict[str, Any]:
+    """Run the batch write path. An orchestrator would call this on a schedule."""
+    return feature_store.materialize(request.target, limit=request.limit)
+
+
+@router.get("/feature-store/stats")
+def feature_store_stats(target: str = Query(default=DEFAULT_TARGET)) -> Dict[str, Any]:
+    if target not in TARGETS:
+        raise HTTPException(status_code=422, detail=f"Unknown target '{target}'.")
+    return feature_store.stats(target)
+
+
+@router.get("/model-cache/stats")
+def model_cache_stats() -> Dict[str, Any]:
+    """Hit rate and residency. A low hit rate explains a slow p99."""
+    return model_cache.stats()

@@ -75,10 +75,22 @@ class PredictRequest(BaseModel):
     rows: List[Dict[str, Any]] = Field(min_length=1, max_length=100)
 
 
+class EntityPredictRequest(BaseModel):
+    """Production-shaped request: identifiers only, features fetched server-side."""
+
+    entity_ids: List[str] = Field(min_length=1, max_length=100)
+
+
 class Prediction(BaseModel):
     prediction: float
     label: Optional[str] = None
     probability: Optional[float] = None
+
+    # Only populated on the entity path — provenance for the features used.
+    entity_id: Optional[str] = None
+    features_found: Optional[bool] = None
+    staleness_seconds: Optional[float] = None
+    imputed_features: Optional[int] = None
 
 
 class PredictResponse(BaseModel):
@@ -86,6 +98,20 @@ class PredictResponse(BaseModel):
     task: str
     target: str
     predictions: List[Prediction]
+    # Split timings, so a slow lookup is distinguishable from a slow model.
+    diagnostics: Optional[Dict[str, Any]] = None
+
+
+class MaterializeRequest(BaseModel):
+    target: str = Field(default=DEFAULT_TARGET)
+    limit: Optional[int] = Field(default=None, ge=1, le=20000)
+
+    @field_validator("target")
+    @classmethod
+    def _known_target(cls, value: str) -> str:
+        if value not in TARGETS:
+            raise ValueError(f"Unknown target '{value}'. Expected one of {sorted(TARGETS)}.")
+        return value
 
 
 class RunAccepted(BaseModel):

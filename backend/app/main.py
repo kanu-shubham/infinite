@@ -6,14 +6,26 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api.routes import API_VERSION, router
-from .config import CORS_ORIGINS, RUNS_DIR
-from .ml import registry
+from .config import CORS_ORIGINS, MODEL_CACHE_SIZE, RUNS_DIR
+from .ml import model_cache, registry
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
     registry.load_from_disk()
+
+    # Preload the most recent models so the first request after a deploy is not
+    # the one that pays the cold-load cost. Without this you get a p99 spike
+    # correlated with every release — and the request that eats it is usually a
+    # health check or a canary.
+    recent = [
+        run["run_id"]
+        for run in registry.list_summaries(status="succeeded", limit=MODEL_CACHE_SIZE)
+    ]
+    if recent:
+        model_cache.warm(recent)
+
     yield
 
 

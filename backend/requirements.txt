@@ -6,6 +6,7 @@ scikit-learn>=1.4,<2.0
 pandas>=2.2,<4.0
 numpy>=1.26,<3.0
 joblib>=1.4,<2.0
+redis>=5.0,<9.0     # online feature store; falls back to an in-process dict
 
 # Tests
 pytest>=8.0
